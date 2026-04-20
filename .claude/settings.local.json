@@ -1,0 +1,28 @@
+{
+  "permissions": {
+    "allow": [
+      "WebSearch",
+      "Bash(go mod *)",
+      "Bash(go build *)",
+      "Bash(npm install *)",
+      "Bash(npm run *)",
+      "Bash(python3 *)",
+      "WebFetch(domain:opendata.swiss)",
+      "WebFetch(domain:www.bern.ch)",
+      "WebFetch(domain:www.kitabern.ch)",
+      "WebFetch(domain:map.bern.ch)",
+      "WebFetch(domain:www.popepoppa.ch)",
+      "WebFetch(domain:stadtplan.bern.ch)",
+      "Bash(go get *)",
+      "Bash(go vet *)",
+      "WebFetch(domain:www.kita-taka-tuka.ch)",
+      "WebFetch(domain:www.kita-laenggasse.ch)",
+      "WebFetch(domain:www.kita-lindenweg.ch)",
+      "Bash(curl -s -L -A \"Mozilla/5.0\" https://www.kitabern.ch/kindertagesstaetten -o /tmp/kitabern_list.html)",
+      "Read(//tmp/**)",
+      "Bash(curl -s -L -A \"Mozilla/5.0\" https://www.kita-laenggasse.ch/kontakt -o /tmp/laenggasse_kontakt.html)",
+      "Bash(go run *)",
+      "Bash(curl -s -L -A \"Mozilla/5.0\" https://www.kita-mattenhof.ch/kontakt -o /tmp/mattenhof_kontakt.html)"
+    ]
+  }
+}

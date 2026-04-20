@@ -1,0 +1,141 @@
+package handlers
+
+import (
+	"encoding/json"
+	"net/http"
+	"strconv"
+	"time"
+
+	"github.com/go-chi/chi/v5"
+	"github.com/pak/kita-springer-manager/internal/importer"
+	"github.com/pak/kita-springer-manager/internal/models"
+	"github.com/pak/kita-springer-manager/internal/seeds"
+	"github.com/pak/kita-springer-manager/internal/store"
+)
+
+func (h *Handler) ListProviders(w http.ResponseWriter, r *http.Request) {
+	providers, err := store.ListProviders(h.db)
+	if err != nil {
+		writeError(w, 500, err.Error())
+		return
+	}
+	if providers == nil {
+		providers = []models.Provider{}
+	}
+	writeJSON(w, 200, providers)
+}
+
+func (h *Handler) CreateProvider(w http.ResponseWriter, r *http.Request) {
+	var p models.Provider
+	if err := json.NewDecoder(r.Body).Decode(&p); err != nil {
+		writeError(w, 400, "invalid request")
+		return
+	}
+	if p.Name == "" {
+		writeError(w, 400, "name required")
+		return
+	}
+	if p.ColorHex == "" {
+		p.ColorHex = "#6366f1"
+	}
+	if err := store.CreateProvider(h.db, &p); err != nil {
+		writeError(w, 500, err.Error())
+		return
+	}
+	writeJSON(w, 201, p)
+}
+
+func (h *Handler) UpdateProvider(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
+	existing, err := store.GetProvider(h.db, id)
+	if err != nil {
+		writeError(w, 500, err.Error())
+		return
+	}
+	if existing == nil {
+		writeError(w, 404, "not found")
+		return
+	}
+	var p models.Provider
+	if err := json.NewDecoder(r.Body).Decode(&p); err != nil {
+		writeError(w, 400, "invalid request")
+		return
+	}
+	p.ID = id
+	if err := store.UpdateProvider(h.db, &p); err != nil {
+		writeError(w, 500, err.Error())
+		return
+	}
+	writeJSON(w, 200, p)
+}
+
+func (h *Handler) DeleteProvider(w http.ResponseWriter, r *http.Request) {
+	if err := store.DeleteProvider(h.db, chi.URLParam(r, "id")); err != nil {
+		writeError(w, 500, err.Error())
+		return
+	}
+	w.WriteHeader(204)
+}
+
+// SeedKitas loads the built-in Kita list for a provider (e.g. "stadt_bern" or "stiftung_bern").
+func (h *Handler) SeedKitas(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
+	provider, err := store.GetProvider(h.db, id)
+	if err != nil || provider == nil {
+		writeError(w, 404, "provider not found")
+		return
+	}
+
+	seedKey := r.URL.Query().Get("seed")
+	kitas, err := seeds.Load(seedKey)
+	if err != nil {
+		writeError(w, 400, err.Error())
+		return
+	}
+
+	count := 0
+	for _, k := range kitas {
+		k.ProviderID = provider.ID
+		if err := store.CreateKita(h.db, &k); err != nil {
+			continue
+		}
+		count++
+	}
+	writeJSON(w, 200, map[string]int{"imported": count})
+}
+
+// ImportExcel handles Excel file upload and imports assignments for the provider.
+func (h *Handler) ImportExcel(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
+	provider, err := store.GetProvider(h.db, id)
+	if err != nil || provider == nil {
+		writeError(w, 404, "provider not found")
+		return
+	}
+
+	if err := r.ParseMultipartForm(20 << 20); err != nil {
+		writeError(w, 400, "file too large or not multipart")
+		return
+	}
+	file, _, err := r.FormFile("file")
+	if err != nil {
+		writeError(w, 400, "file required")
+		return
+	}
+	defer file.Close()
+
+	year := time.Now().Year()
+	if y := r.FormValue("year"); y != "" {
+		if n, err := strconv.Atoi(y); err == nil {
+			year = n
+		}
+	}
+
+	result, err := importer.ImportExcel(h.db, file, provider, year)
+	if err != nil {
+		writeError(w, 422, err.Error())
+		return
+	}
+	writeJSON(w, 200, result)
+}
+

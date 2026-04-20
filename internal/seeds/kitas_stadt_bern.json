@@ -1,0 +1,98 @@
+[
+  {
+    "name": "Kita Aaregg",
+    "address": "Oberer Aareggweg 51, 3004 Bern",
+    "phone": "031 321 55 80",
+    "email": "kita.aaregg@bern.ch",
+    "stop_name": "Bern, Aaregg",
+    "groups": []
+  },
+  {
+    "name": "Kita Altenberg",
+    "address": "Altenbergstrasse 9, 3013 Bern",
+    "phone": "031 321 55 60",
+    "email": "kita.altenberg@bern.ch",
+    "stop_name": "Bern, Altenberg",
+    "groups": []
+  },
+  {
+    "name": "Kita Ausserholligen",
+    "address": "Krippenstrasse 28, 3008 Bern",
+    "phone": "031 321 55 75",
+    "email": "kita.ausserholligen@bern.ch",
+    "stop_name": "Bern, Ausserholligen",
+    "groups": ["Moosgrün", "Sonnengelb"]
+  },
+  {
+    "name": "Kita Breitenrain",
+    "address": "Stockerenweg 6, 3014 Bern",
+    "phone": "031 321 49 10",
+    "email": "kita.breitenrain@bern.ch",
+    "stop_name": "Bern, Breitenrain",
+    "groups": []
+  },
+  {
+    "name": "Kita Brünnengut",
+    "address": "Brünnenstrasse 4, 3027 Bern",
+    "phone": "031 321 55 30",
+    "email": "kita.bruennengut@bern.ch",
+    "stop_name": "Bern, Brünnengut",
+    "groups": []
+  },
+  {
+    "name": "Kita Holenacker",
+    "address": "Gäbelbachstrasse 16, 3027 Bern",
+    "phone": "031 321 55 40",
+    "email": "kita.holenacker@bern.ch",
+    "stop_name": "Bern, Holenacker",
+    "groups": ["Tintenfischli", "Schildkrötli", "Chräbsli"]
+  },
+  {
+    "name": "Kita Lorraine",
+    "address": "Lorrainestrasse 80, 3013 Bern",
+    "phone": "031 321 55 99",
+    "email": "kita.lorraine@bern.ch",
+    "stop_name": "Bern, Lorraine",
+    "groups": ["Waschbär", "Koala", "Grizzly"]
+  },
+  {
+    "name": "Kita Spitalacker",
+    "address": "Blumenbergstrasse 48, 3013 Bern",
+    "phone": "031 321 51 61",
+    "email": "kita.spitalacker@bern.ch",
+    "stop_name": "Bern, Spitalacker",
+    "groups": ["Violett", "Gelb"]
+  },
+  {
+    "name": "Kita Tscharnergut",
+    "address": "Waldmannstrasse 33, 3027 Bern",
+    "phone": "031 321 55 50",
+    "email": "kita.tscharnergut@bern.ch",
+    "stop_name": "Bern, Tscharnergut",
+    "groups": ["Babygruppe", "Callaina", "Viridis", "Purpura"]
+  },
+  {
+    "name": "Kita Viktoria",
+    "address": "Schläflistrasse 17, 3013 Bern",
+    "phone": "031 321 56 09",
+    "email": "kita.viktoria@bern.ch",
+    "stop_name": "Bern, Viktoria",
+    "groups": []
+  },
+  {
+    "name": "Kita Weissenstein",
+    "address": "Weberstrasse 15, 3007 Bern",
+    "phone": "031 321 55 33",
+    "email": "kita.weissenstein@bern.ch",
+    "stop_name": "Bern, Weissenstein",
+    "groups": ["Gruppe Grün", "Gruppe Blau"]
+  },
+  {
+    "name": "Kita Wyler",
+    "address": "Wylerringstrasse 60, 3014 Bern",
+    "phone": "031 321 55 15",
+    "email": "kita.wyler@bern.ch",
+    "stop_name": "Bern, Wyler",
+    "groups": ["Zwerge", "Bären"]
+  }
+]

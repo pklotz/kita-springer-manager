@@ -1,0 +1,66 @@
+[
+  {
+    "name": "Kita Länggasse",
+    "address": "Länggassstrasse 64, 3012 Bern",
+    "phone": "",
+    "email": "",
+    "stop_name": "Bern, Universität",
+    "groups": []
+  },
+  {
+    "name": "Kita Taka Tuka",
+    "address": "Lerchenweg 33, 3012 Bern",
+    "phone": "",
+    "email": "",
+    "stop_name": "Bern, Taka Tuka",
+    "groups": []
+  },
+  {
+    "name": "Kita Lindenweg",
+    "address": "Ostermundigen",
+    "phone": "",
+    "email": "",
+    "stop_name": "Ostermundigen",
+    "groups": []
+  },
+  {
+    "name": "Kita Im Favorite",
+    "address": "Bern",
+    "phone": "",
+    "email": "",
+    "stop_name": "",
+    "groups": []
+  },
+  {
+    "name": "Kita Sterntaler",
+    "address": "Bern",
+    "phone": "",
+    "email": "",
+    "stop_name": "",
+    "groups": []
+  },
+  {
+    "name": "Flex Kita Fischerweg",
+    "address": "Bern",
+    "phone": "",
+    "email": "",
+    "stop_name": "",
+    "groups": []
+  },
+  {
+    "name": "Kita Firlifanz",
+    "address": "Bern",
+    "phone": "",
+    "email": "",
+    "stop_name": "",
+    "groups": []
+  },
+  {
+    "name": "Kita Mattenhof",
+    "address": "Bern",
+    "phone": "",
+    "email": "",
+    "stop_name": "",
+    "groups": []
+  }
+]
