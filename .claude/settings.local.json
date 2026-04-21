@@ -22,7 +22,12 @@
       "Read(//tmp/**)",
       "Bash(curl -s -L -A \"Mozilla/5.0\" https://www.kita-laenggasse.ch/kontakt -o /tmp/laenggasse_kontakt.html)",
       "Bash(go run *)",
-      "Bash(curl -s -L -A \"Mozilla/5.0\" https://www.kita-mattenhof.ch/kontakt -o /tmp/mattenhof_kontakt.html)"
+      "Bash(curl -s -L -A \"Mozilla/5.0\" https://www.kita-mattenhof.ch/kontakt -o /tmp/mattenhof_kontakt.html)",
+      "Read(//private/tmp/**)",
+      "Bash(unzip -o /Users/pak/Downloads/Mai_2026.xlsx -d mai_xlsx)",
+      "Bash(sqlite3 *)",
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)"
     ]
   }
 }

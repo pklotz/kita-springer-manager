@@ -13,14 +13,13 @@ type Provider struct {
 
 // ExcelConfig describes how to parse a provider's Excel schedule.
 type ExcelConfig struct {
-	PersonName    string            `json:"person_name"`    // row to extract, e.g. "Natalia"
-	NameCol       string            `json:"name_col"`       // column with names, e.g. "A"
-	HeaderRow     int               `json:"header_row"`     // row with weekday labels, e.g. 2
-	KitaRow       int               `json:"kita_row"`       // row with group/kita abbreviation, e.g. 3
-	FirstDayCol   string            `json:"first_day_col"`  // first day start column, e.g. "B"
-	ColsPerDay    int               `json:"cols_per_day"`   // column pairs per day, e.g. 2
-	DaysPerWeek   int               `json:"days_per_week"`  // e.g. 5 (Mon-Fri)
-	KitaMapping   map[string]string `json:"kita_mapping"`   // abbrev → kita_id
+	NameCol     string            `json:"name_col"`      // column with names, e.g. "A"
+	HeaderRow   int               `json:"header_row"`    // row with weekday labels, e.g. 2
+	KitaRow     int               `json:"kita_row"`      // row with group/kita abbreviation, e.g. 3
+	FirstDayCol string            `json:"first_day_col"` // first day start column, e.g. "B"
+	ColsPerDay  int               `json:"cols_per_day"`  // column pairs per day, e.g. 2
+	DaysPerWeek int               `json:"days_per_week"` // e.g. 5 (Mon-Fri)
+	KitaMapping map[string]string `json:"kita_mapping"`  // abbrev → kita_id
 }
 
 type RecurringAssignment struct {

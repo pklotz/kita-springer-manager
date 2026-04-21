@@ -22,12 +22,20 @@ type Result struct {
 	Warnings []string `json:"warnings,omitempty"`
 }
 
+// Options customize the import beyond the provider's ExcelConfig.
+type Options struct {
+	UserName       string // required — user's name as it appears in Excel; full name OR any token matches
+	Year           int    // required — year of the schedule
+	Month          int    // optional (1–12) — if set, entries outside this month are skipped
+	KitaIDOverride string // optional — if set, all assignments are linked to this kita (ignores KitaMapping)
+}
+
 // ImportExcel parses an xlsx file and creates/updates assignments for the configured person.
-func ImportExcel(db *sql.DB, r io.Reader, provider *models.Provider, year int) (*Result, error) {
-	cfg := provider.ExcelConfig
-	if cfg.PersonName == "" {
-		return nil, fmt.Errorf("excel_config.person_name not configured for this provider")
+func ImportExcel(db *sql.DB, r io.Reader, provider *models.Provider, opts Options) (*Result, error) {
+	if strings.TrimSpace(opts.UserName) == "" {
+		return nil, fmt.Errorf("user name not configured in settings")
 	}
+	cfg := provider.ExcelConfig
 	setDefaults(&cfg)
 
 	f, err := excelize.OpenReader(r)
@@ -44,14 +52,33 @@ func ImportExcel(db *sql.DB, r io.Reader, provider *models.Provider, year int) (
 			result.Warnings = append(result.Warnings, fmt.Sprintf("sheet %q: %v", sheetName, err))
 			continue
 		}
-		if err := processSheet(db, rows, provider, &cfg, year, sheetName, result); err != nil {
+		if err := processSheet(db, rows, provider, &cfg, opts, sheetName, result); err != nil {
 			result.Warnings = append(result.Warnings, fmt.Sprintf("sheet %q: %v", sheetName, err))
 		}
 	}
 	return result, nil
 }
 
-func processSheet(db *sql.DB, rows [][]string, provider *models.Provider, cfg *models.ExcelConfig, year int, sheetName string, result *Result) error {
+// nameMatches returns true if the Excel row's name cell equals the user's full
+// name or any whitespace-separated token from it (case-insensitive).
+func nameMatches(cell, userName string) bool {
+	c := strings.ToLower(strings.TrimSpace(cell))
+	if c == "" {
+		return false
+	}
+	full := strings.ToLower(strings.TrimSpace(userName))
+	if c == full {
+		return true
+	}
+	for _, tok := range strings.Fields(full) {
+		if c == tok {
+			return true
+		}
+	}
+	return false
+}
+
+func processSheet(db *sql.DB, rows [][]string, provider *models.Provider, cfg *models.ExcelConfig, opts Options, sheetName string, result *Result) error {
 	if len(rows) < cfg.KitaRow {
 		return fmt.Errorf("too few rows")
 	}
@@ -66,13 +93,13 @@ func processSheet(db *sql.DB, rows [][]string, provider *models.Provider, cfg *m
 		if i < cfg.KitaRow {
 			continue
 		}
-		if len(row) > 0 && strings.EqualFold(strings.TrimSpace(row[0]), strings.TrimSpace(cfg.PersonName)) {
+		if len(row) > 0 && nameMatches(row[0], opts.UserName) {
 			personRow = i
 			break
 		}
 	}
 	if personRow == -1 {
-		return fmt.Errorf("person %q not found", cfg.PersonName)
+		return fmt.Errorf("person %q not found", opts.UserName)
 	}
 
 	data := rows[personRow]
@@ -83,8 +110,11 @@ func processSheet(db *sql.DB, rows [][]string, provider *models.Provider, cfg *m
 		endColIdx := startColIdx + 1
 
 		// Parse date from header
-		date := parseDate(headerRow, startColIdx, year)
+		date, dateMonth := parseDate(headerRow, startColIdx, opts.Year)
 		if date == "" {
+			continue
+		}
+		if opts.Month > 0 && dateMonth != opts.Month {
 			continue
 		}
 
@@ -94,31 +124,25 @@ func processSheet(db *sql.DB, rows [][]string, provider *models.Provider, cfg *m
 			groupName = strings.TrimSpace(kitaRow[startColIdx])
 		}
 
-		// Resolve kita ID from mapping
-		kitaID := ""
-		if groupName != "" {
+		// Resolve kita ID — override wins over mapping.
+		kitaID := opts.KitaIDOverride
+		if kitaID == "" && groupName != "" {
 			if id, ok := cfg.KitaMapping[groupName]; ok {
 				kitaID = id
 			}
 		}
 
-		// Start/end time values
+		// Only cells with a time value represent an actual assignment.
+		// Anything else ("Frei", "Schule", "Kurs", "Ferien", holiday names, empty)
+		// is skipped — those aren't shifts.
 		startRaw := cellVal(data, startColIdx)
 		endRaw := cellVal(data, endColIdx)
 
-		var status, startTime, endTime string
-		if isTimeValue(startRaw) {
-			status = models.StatusScheduled
-			startTime = decimalToTime(startRaw)
-			if isTimeValue(endRaw) {
-				endTime = decimalToTime(endRaw)
-			}
-		} else if startRaw != "" {
-			// "Frei", "Schule", "Kurs", etc.
-			status = models.StatusFree
-		} else {
-			continue // empty cell → no entry
+		startTime, ok := parseTime(startRaw)
+		if !ok {
+			continue
 		}
+		endTime, _ := parseTime(endRaw)
 
 		hash := importHash(provider.ID, date, startRaw, endRaw)
 
@@ -129,10 +153,9 @@ func processSheet(db *sql.DB, rows [][]string, provider *models.Provider, cfg *m
 			Date:       date,
 			StartTime:  startTime,
 			EndTime:    endTime,
-			Status:     status,
+			Status:     models.StatusScheduled,
 			Source:     models.SourceExcel,
 			ImportHash: hash,
-			Notes:      freeLabel(startRaw, status),
 		}
 
 		wasCreated, err := store.UpsertByHash(db, a)
@@ -168,38 +191,38 @@ func cellVal(row []string, i int) string {
 
 var dayHeaderRe = regexp.MustCompile(`(\d+)\.(\d+)\.`)
 
-func parseDate(headerRow []string, colIdx int, year int) string {
+func parseDate(headerRow []string, colIdx int, year int) (string, int) {
 	val := cellVal(headerRow, colIdx)
 	m := dayHeaderRe.FindStringSubmatch(val)
 	if m == nil {
-		return ""
+		return "", 0
 	}
 	day, _ := strconv.Atoi(m[1])
 	month, _ := strconv.Atoi(m[2])
-	return fmt.Sprintf("%04d-%02d-%02d", year, month, day)
+	return fmt.Sprintf("%04d-%02d-%02d", year, month, day), month
 }
 
-func isTimeValue(s string) bool {
+var hhmmRe = regexp.MustCompile(`^(\d{1,2}):(\d{2})$`)
+
+// parseTime accepts either "HH:MM" strings (excelize returns display values for
+// time-formatted cells) or Excel decimal day fractions (e.g. 0.354 for 08:30).
+func parseTime(s string) (string, bool) {
+	s = strings.TrimSpace(s)
 	if s == "" {
-		return false
+		return "", false
 	}
-	_, err := strconv.ParseFloat(s, 64)
-	return err == nil
-}
-
-func decimalToTime(s string) string {
-	v, _ := strconv.ParseFloat(s, 64)
-	totalMin := int(math.Round(v * 24 * 60))
-	h := totalMin / 60
-	m := totalMin % 60
-	return fmt.Sprintf("%02d:%02d", h, m)
-}
-
-func freeLabel(raw, status string) string {
-	if status == models.StatusFree && raw != "" {
-		return raw
+	if m := hhmmRe.FindStringSubmatch(s); m != nil {
+		h, _ := strconv.Atoi(m[1])
+		mm, _ := strconv.Atoi(m[2])
+		if h >= 0 && h <= 23 && mm >= 0 && mm <= 59 {
+			return fmt.Sprintf("%02d:%02d", h, mm), true
+		}
 	}
-	return ""
+	if v, err := strconv.ParseFloat(s, 64); err == nil && v >= 0 && v < 1 {
+		totalMin := int(math.Round(v * 24 * 60))
+		return fmt.Sprintf("%02d:%02d", totalMin/60, totalMin%60), true
+	}
+	return "", false
 }
 
 func importHash(providerID, date, start, end string) string {

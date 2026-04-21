@@ -41,10 +41,10 @@
               <Upload class="w-3.5 h-3.5" /> Kitas importieren
               <input type="file" accept=".xlsx" class="hidden" @change="importKitasExcel(p, $event)" />
             </label>
-            <label class="flex items-center gap-1.5 text-xs bg-indigo-50 hover:bg-indigo-100 text-indigo-700 px-3 py-1.5 rounded-lg cursor-pointer transition-colors">
+            <button @click="openImportDialog(p)"
+              class="flex items-center gap-1.5 text-xs bg-indigo-50 hover:bg-indigo-100 text-indigo-700 px-3 py-1.5 rounded-lg transition-colors">
               <FileSpreadsheet class="w-3.5 h-3.5" /> Einsatz-Excel
-              <input type="file" accept=".xlsx" class="hidden" @change="importExcel(p, $event)" />
-            </label>
+            </button>
             <button @click="openRecurring(p)"
               class="flex items-center gap-1.5 text-xs bg-purple-50 hover:bg-purple-100 text-purple-700 px-3 py-1.5 rounded-lg transition-colors">
               <Repeat class="w-3.5 h-3.5" /> Fixe Einsätze
@@ -256,10 +256,6 @@
           <input type="color" v-model="form.color_hex" class="w-8 h-8 rounded-full cursor-pointer border-0" />
         </div>
 
-        <label class="block text-sm text-gray-600 mb-1">Person (Name im Excel)</label>
-        <input v-model="form.excel_config.person_name" type="text" placeholder="Natalia"
-          class="w-full rounded-lg border border-gray-200 px-3 py-2 mb-3 focus:outline-none focus:ring-2 focus:ring-brand-500" />
-
         <details class="mb-4">
           <summary class="text-sm text-gray-500 cursor-pointer hover:text-gray-700">Erweiterte Excel-Konfiguration</summary>
           <div class="mt-3 grid grid-cols-2 gap-3">
@@ -354,6 +350,41 @@
       </div>
     </div>
 
+    <!-- ── Einsatz-Excel Import Dialog ───────────────────────── -->
+    <div v-if="importDialog.provider" class="fixed inset-0 bg-black/40 flex items-end sm:items-center justify-center z-50 p-4">
+      <div class="bg-white rounded-2xl w-full max-w-md p-6 shadow-xl">
+        <h3 class="font-semibold text-lg mb-1">Einsatz-Excel importieren</h3>
+        <p class="text-sm text-gray-500 mb-4">Träger: <span class="font-medium text-gray-700">{{ importDialog.provider.name }}</span></p>
+
+        <label class="block text-sm text-gray-600 mb-1">Monat *</label>
+        <input v-model="importDialog.month" type="month"
+          class="w-full rounded-lg border border-gray-200 px-3 py-2 mb-3 focus:outline-none focus:ring-2 focus:ring-brand-500" />
+
+        <label class="block text-sm text-gray-600 mb-1">Kita (optional)</label>
+        <select v-model="importDialog.kitaId"
+          class="w-full rounded-lg border border-gray-200 px-3 py-2 mb-1 focus:outline-none focus:ring-2 focus:ring-brand-500">
+          <option value="">– Kita aus Excel-Spalte ermitteln –</option>
+          <option v-for="k in kitasOf(importDialog.provider.id)" :key="k.id" :value="k.id">{{ k.name }}</option>
+        </select>
+        <p class="text-xs text-gray-500 mb-3">Wenn gesetzt, werden alle Einsätze dieser Kita zugeordnet — für Excel-Files, die nur eine Kita abbilden.</p>
+
+        <label class="block text-sm text-gray-600 mb-1">Datei *</label>
+        <input type="file" accept=".xlsx" @change="importDialog.file = $event.target.files[0]"
+          class="w-full text-sm mb-4 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100" />
+
+        <div v-if="importDialog.error" class="text-sm text-red-600 mb-3">{{ importDialog.error }}</div>
+
+        <div class="flex gap-3">
+          <button @click="closeImportDialog" :disabled="importDialog.loading"
+            class="flex-1 py-2 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 disabled:opacity-50">Abbrechen</button>
+          <button @click="submitImport" :disabled="!importDialog.file || !importDialog.month || importDialog.loading"
+            class="flex-1 py-2 rounded-lg bg-brand-500 text-white hover:bg-brand-600 disabled:opacity-50 transition-colors">
+            {{ importDialog.loading ? 'Importiere…' : 'Importieren' }}
+          </button>
+        </div>
+      </div>
+    </div>
+
     <RecurringForm v-if="recurringProvider" :provider="recurringProvider" @close="recurringProvider = null" />
   </div>
 </template>
@@ -387,7 +418,7 @@ const colors = ['#6366f1','#2563eb','#16a34a','#dc2626','#ea580c','#9333ea','#08
 // ── Provider form ────────────────────────────────────────────
 const defaultProviderForm = () => ({
   name: '', color_hex: '#6366f1',
-  excel_config: { person_name: '', header_row: 2, kita_row: 3, first_day_col: 'B', cols_per_day: 2, days_per_week: 5, kita_mapping: {} },
+  excel_config: { header_row: 2, kita_row: 3, first_day_col: 'B', cols_per_day: 2, days_per_week: 5, kita_mapping: {} },
 })
 const form = ref(defaultProviderForm())
 
@@ -486,14 +517,40 @@ const importKitasExcel = async (p, event) => {
   load()
 }
 
-const importExcel = async (p, event) => {
-  const file = event.target.files[0]; if (!file) return
+// Einsatz-Excel Dialog
+const defaultMonth = () => {
+  const d = new Date()
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+}
+const importDialog = reactive({
+  provider: null, kitaId: '', month: defaultMonth(), file: null, loading: false, error: '',
+})
+const openImportDialog = (p) => {
+  importDialog.provider = p
+  importDialog.kitaId = ''
+  importDialog.month = defaultMonth()
+  importDialog.file = null
+  importDialog.error = ''
+}
+const closeImportDialog = () => { importDialog.provider = null }
+const submitImport = async () => {
+  const p = importDialog.provider
+  if (!p || !importDialog.file || !importDialog.month) return
+  const [year, month] = importDialog.month.split('-').map(Number)
+  importDialog.loading = true
+  importDialog.error = ''
   try {
-    const result = await providersApi.importExcel(p.id, file, new Date().getFullYear())
+    const result = await providersApi.importExcel(p.id, importDialog.file, {
+      year, month, kitaId: importDialog.kitaId || undefined,
+    })
     importResult[p.id] = result
     setTimeout(() => { delete importResult[p.id] }, 8000)
-  } catch (e) { alert('Import-Fehler: ' + (e.response?.data?.error || e.message)) }
-  event.target.value = ''
+    closeImportDialog()
+  } catch (e) {
+    importDialog.error = e.response?.data?.error || e.message
+  } finally {
+    importDialog.loading = false
+  }
 }
 
 const load = async () => {

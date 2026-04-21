@@ -124,14 +124,30 @@ func (h *Handler) ImportExcel(w http.ResponseWriter, r *http.Request) {
 	}
 	defer file.Close()
 
-	year := time.Now().Year()
-	if y := r.FormValue("year"); y != "" {
-		if n, err := strconv.Atoi(y); err == nil {
-			year = n
-		}
+	settings, err := store.GetSettings(h.db)
+	if err != nil {
+		writeError(w, 500, err.Error())
+		return
+	}
+	if settings == nil || settings.UserName == "" {
+		writeError(w, 422, "Name in den Einstellungen fehlt")
+		return
 	}
 
-	result, err := importer.ImportExcel(h.db, file, provider, year)
+	opts := importer.Options{Year: time.Now().Year(), UserName: settings.UserName}
+	if y := r.FormValue("year"); y != "" {
+		if n, err := strconv.Atoi(y); err == nil {
+			opts.Year = n
+		}
+	}
+	if m := r.FormValue("month"); m != "" {
+		if n, err := strconv.Atoi(m); err == nil && n >= 1 && n <= 12 {
+			opts.Month = n
+		}
+	}
+	opts.KitaIDOverride = r.FormValue("kita_id")
+
+	result, err := importer.ImportExcel(h.db, file, provider, opts)
 	if err != nil {
 		writeError(w, 422, err.Error())
 		return

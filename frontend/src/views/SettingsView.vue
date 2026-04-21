@@ -3,6 +3,15 @@
     <h2 class="text-xl font-semibold mb-6">Einstellungen</h2>
 
     <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-4 mb-4">
+      <h3 class="font-semibold text-gray-700 mb-3">Persönlich</h3>
+
+      <label class="block text-sm text-gray-600 mb-1">Name im Einsatzplan</label>
+      <input v-model="form.user_name" type="text" placeholder="Natalia Majer"
+        class="w-full rounded-lg border border-gray-200 px-3 py-2 mb-1 focus:outline-none focus:ring-2 focus:ring-brand-500" />
+      <p class="text-xs text-gray-400">Voller Name — beim Import wird sowohl der ganze Name als auch jeder Vor-/Nachname einzeln erkannt.</p>
+    </div>
+
+    <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-4 mb-4">
       <h3 class="font-semibold text-gray-700 mb-3">Wohnadresse</h3>
 
       <label class="block text-sm text-gray-600 mb-1">Adresse</label>
@@ -45,6 +54,7 @@ import StopSearch from '../components/StopSearch.vue'
 const form = ref({
   home_address: '',
   home_stop: '',
+  user_name: '',
   transit_prefs: { exclude_types: [], walking_speed: 'normal' },
 })
 const saved = ref(false)
@@ -68,6 +78,7 @@ onMounted(async () => {
   form.value = {
     home_address: s.home_address || '',
     home_stop: s.home_stop || '',
+    user_name: s.user_name || '',
     transit_prefs: s.transit_prefs || { exclude_types: [], walking_speed: 'normal' },
   }
 })

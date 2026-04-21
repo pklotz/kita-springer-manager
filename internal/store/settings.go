@@ -29,6 +29,7 @@ func GetSettings(db *sql.DB) (*models.Settings, error) {
 	s := &models.Settings{}
 	s.HomeAddress = kv["home_address"]
 	s.HomeStop = kv["home_stop"]
+	s.UserName = kv["user_name"]
 	if v, ok := kv["transit_prefs"]; ok && v != "" {
 		json.Unmarshal([]byte(v), &s.TransitPrefs) //nolint:errcheck
 	}
@@ -55,6 +56,7 @@ func SaveSettings(db *sql.DB, s *models.Settings) error {
 	for _, kv := range [][2]string{
 		{"home_address", s.HomeAddress},
 		{"home_stop", s.HomeStop},
+		{"user_name", s.UserName},
 		{"transit_prefs", string(prefsJSON)},
 	} {
 		if err := upsert(kv[0], kv[1]); err != nil {

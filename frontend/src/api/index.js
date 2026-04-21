@@ -20,10 +20,12 @@ export const providersApi = {
   update: (id, data) => api.put(`/providers/${id}`, data).then(r => r.data),
   delete: (id) => api.delete(`/providers/${id}`),
   seedKitas: (id, seed) => api.post(`/providers/${id}/seed-kitas?seed=${seed}`).then(r => r.data),
-  importExcel: (id, file, year) => {
+  importExcel: (id, file, { year, month, kitaId } = {}) => {
     const form = new FormData()
     form.append('file', file)
-    if (year) form.append('year', year)
+    if (year)   form.append('year', year)
+    if (month)  form.append('month', month)
+    if (kitaId) form.append('kita_id', kitaId)
     return api.post(`/providers/${id}/import-excel`, form, {
       headers: { 'Content-Type': 'multipart/form-data' },
     }).then(r => r.data)
