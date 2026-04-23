@@ -82,3 +82,51 @@ func (h *Handler) DeleteKita(w http.ResponseWriter, r *http.Request) {
 	}
 	w.WriteHeader(204)
 }
+
+// LookupStops geocodes the Kita address and stores up to 2 nearest transit stops.
+func (h *Handler) LookupStops(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
+	k, err := store.GetKita(h.db, id)
+	if err != nil {
+		writeError(w, 500, err.Error())
+		return
+	}
+	if k == nil {
+		writeError(w, 404, "not found")
+		return
+	}
+	if k.Address == "" {
+		writeError(w, 422, "Keine Adresse hinterlegt")
+		return
+	}
+	lat, lng, err := h.transit.Geocode(k.Address)
+	if err != nil {
+		writeError(w, 502, "Geocoding fehlgeschlagen: "+err.Error())
+		return
+	}
+	result, err := h.transit.StopsNear(lat, lng)
+	if err != nil {
+		writeError(w, 502, "Haltestellen-Suche fehlgeschlagen: "+err.Error())
+		return
+	}
+	stops := []string{}
+	for _, s := range result.Stations {
+		if s.Name == "" {
+			continue
+		}
+		stops = append(stops, s.Name)
+		if len(stops) >= 2 {
+			break
+		}
+	}
+	if len(stops) == 0 {
+		writeError(w, 422, "Keine Haltestellen in der Nähe gefunden")
+		return
+	}
+	k.Stops = stops
+	if err := store.UpdateKita(h.db, k); err != nil {
+		writeError(w, 500, err.Error())
+		return
+	}
+	writeJSON(w, 200, k)
+}

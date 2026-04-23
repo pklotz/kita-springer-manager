@@ -3,6 +3,7 @@ package store
 import (
 	"database/sql"
 	"encoding/json"
+	"strconv"
 
 	"github.com/pak/kita-springer-manager/internal/models"
 )
@@ -30,6 +31,12 @@ func GetSettings(db *sql.DB) (*models.Settings, error) {
 	s.HomeAddress = kv["home_address"]
 	s.HomeStop = kv["home_stop"]
 	s.UserName = kv["user_name"]
+	if v, err := strconv.ParseFloat(kv["home_lat"], 64); err == nil {
+		s.HomeLat = v
+	}
+	if v, err := strconv.ParseFloat(kv["home_lng"], 64); err == nil {
+		s.HomeLng = v
+	}
 	if v, ok := kv["transit_prefs"]; ok && v != "" {
 		json.Unmarshal([]byte(v), &s.TransitPrefs) //nolint:errcheck
 	}
@@ -53,9 +60,17 @@ func SaveSettings(db *sql.DB, s *models.Settings) error {
 		return err
 	}
 
+	latStr, lngStr := "", ""
+	if s.HomeLat != 0 || s.HomeLng != 0 {
+		latStr = strconv.FormatFloat(s.HomeLat, 'f', 6, 64)
+		lngStr = strconv.FormatFloat(s.HomeLng, 'f', 6, 64)
+	}
+
 	for _, kv := range [][2]string{
 		{"home_address", s.HomeAddress},
 		{"home_stop", s.HomeStop},
+		{"home_lat", latStr},
+		{"home_lng", lngStr},
 		{"user_name", s.UserName},
 		{"transit_prefs", string(prefsJSON)},
 	} {

@@ -12,11 +12,13 @@ const assignmentSelect = `
 	SELECT a.id,
 	       COALESCE(a.kita_id,''), COALESCE(a.provider_id,''),
 	       COALESCE(a.group_name,''), a.date, a.start_time, a.end_time,
-	       COALESCE(a.actual_start_time,''), COALESCE(a.actual_end_time,''),
+	       COALESCE(a.actual_start_time,''),
+	       COALESCE(a.actual_break_start,''), COALESCE(a.actual_break_end,''),
+	       COALESCE(a.actual_end_time,''),
 	       COALESCE(a.status,'scheduled'), COALESCE(a.source,'manual'),
 	       COALESCE(a.import_hash,''), COALESCE(a.notes,''), a.created_at,
 	       COALESCE(k.name,''), COALESCE(k.address,''), COALESCE(k.stop_name,''),
-	       COALESCE(p.name,''), COALESCE(p.color_hex,'')
+	       COALESCE(p.name,''), COALESCE(p.color_hex,''), COALESCE(p.min_break_minutes,30)
 	FROM assignments a
 	LEFT JOIN kitas    k ON k.id = a.kita_id
 	LEFT JOIN providers p ON p.id = a.provider_id`
@@ -64,10 +66,10 @@ func scanAssignments(rows *sql.Rows) ([]models.Assignment, error) {
 		if err := rows.Scan(
 			&a.ID, &a.KitaID, &a.ProviderID,
 			&a.GroupName, &a.Date, &a.StartTime, &a.EndTime,
-			&a.ActualStartTime, &a.ActualEndTime,
+			&a.ActualStartTime, &a.ActualBreakStart, &a.ActualBreakEnd, &a.ActualEndTime,
 			&a.Status, &a.Source, &a.ImportHash, &a.Notes, &a.CreatedAt,
 			&a.Kita.Name, &a.Kita.Address, &a.Kita.StopName,
-			&a.Provider.Name, &a.Provider.ColorHex,
+			&a.Provider.Name, &a.Provider.ColorHex, &a.Provider.MinBreakMinutes,
 		); err != nil {
 			return nil, err
 		}
@@ -151,10 +153,12 @@ func CreateAssignment(db *sql.DB, a *models.Assignment) error {
 	kitaID := sql.NullString{String: a.KitaID, Valid: a.KitaID != ""}
 	providerID := sql.NullString{String: a.ProviderID, Valid: a.ProviderID != ""}
 	_, err := db.Exec(
-		`INSERT INTO assignments (id, kita_id, provider_id, group_name, date, start_time, end_time, actual_start_time, actual_end_time, status, source, import_hash, notes, created_at)
-		 VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+		`INSERT INTO assignments (id, kita_id, provider_id, group_name, date, start_time, end_time,
+		 actual_start_time, actual_break_start, actual_break_end, actual_end_time,
+		 status, source, import_hash, notes, created_at)
+		 VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
 		a.ID, kitaID, providerID, a.GroupName, a.Date, a.StartTime, a.EndTime,
-		a.ActualStartTime, a.ActualEndTime,
+		a.ActualStartTime, a.ActualBreakStart, a.ActualBreakEnd, a.ActualEndTime,
 		a.Status, a.Source, a.ImportHash, a.Notes, a.CreatedAt,
 	)
 	return err
@@ -165,9 +169,11 @@ func UpdateAssignment(db *sql.DB, a *models.Assignment) error {
 	providerID := sql.NullString{String: a.ProviderID, Valid: a.ProviderID != ""}
 	_, err := db.Exec(
 		`UPDATE assignments SET kita_id=?, provider_id=?, group_name=?, date=?, start_time=?, end_time=?,
-		 actual_start_time=?, actual_end_time=?, status=?, notes=? WHERE id=?`,
+		 actual_start_time=?, actual_break_start=?, actual_break_end=?, actual_end_time=?,
+		 status=?, notes=? WHERE id=?`,
 		kitaID, providerID, a.GroupName, a.Date, a.StartTime, a.EndTime,
-		a.ActualStartTime, a.ActualEndTime, a.Status, a.Notes, a.ID,
+		a.ActualStartTime, a.ActualBreakStart, a.ActualBreakEnd, a.ActualEndTime,
+		a.Status, a.Notes, a.ID,
 	)
 	return err
 }

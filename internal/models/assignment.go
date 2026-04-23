@@ -21,8 +21,10 @@ type Assignment struct {
 	Date            string    `json:"date"`
 	StartTime       string    `json:"start_time"`
 	EndTime         string    `json:"end_time"`
-	ActualStartTime string    `json:"actual_start_time"`
-	ActualEndTime   string    `json:"actual_end_time"`
+	ActualStartTime  string    `json:"actual_start_time"`
+	ActualBreakStart string    `json:"actual_break_start"`
+	ActualBreakEnd   string    `json:"actual_break_end"`
+	ActualEndTime    string    `json:"actual_end_time"`
 	Status          string    `json:"status"` // scheduled | free
 	Source          string    `json:"source"` // manual | excel | recurring
 	ImportHash      string    `json:"import_hash,omitempty"`

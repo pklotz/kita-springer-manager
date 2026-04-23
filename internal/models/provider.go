@@ -3,12 +3,13 @@ package models
 import "time"
 
 type Provider struct {
-	ID          string      `json:"id"`
-	Name        string      `json:"name"`
-	ColorHex    string      `json:"color_hex"`
-	Notes       string      `json:"notes,omitempty"`
-	ExcelConfig ExcelConfig `json:"excel_config"`
-	CreatedAt   time.Time   `json:"created_at"`
+	ID              string      `json:"id"`
+	Name            string      `json:"name"`
+	ColorHex        string      `json:"color_hex"`
+	Notes           string      `json:"notes,omitempty"`
+	MinBreakMinutes int         `json:"min_break_minutes"`
+	ExcelConfig     ExcelConfig `json:"excel_config"`
+	CreatedAt       time.Time   `json:"created_at"`
 }
 
 // ExcelConfig describes how to parse a provider's Excel schedule.

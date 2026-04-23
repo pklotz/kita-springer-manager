@@ -118,6 +118,17 @@ var migrations = [][]string{
 		`ALTER TABLE assignments ADD COLUMN actual_start_time TEXT NOT NULL DEFAULT ''`,
 		`ALTER TABLE assignments ADD COLUMN actual_end_time   TEXT NOT NULL DEFAULT ''`,
 	},
+	// v7: multi-stop support on kitas (stops JSON array, backfilled from stop_name)
+	{
+		`ALTER TABLE kitas ADD COLUMN stops TEXT NOT NULL DEFAULT '[]'`,
+		`UPDATE kitas SET stops = json_array(stop_name) WHERE stops = '[]' AND stop_name != ''`,
+	},
+	// v8: break tracking on assignments, min-break default on providers
+	{
+		`ALTER TABLE assignments ADD COLUMN actual_break_start TEXT NOT NULL DEFAULT ''`,
+		`ALTER TABLE assignments ADD COLUMN actual_break_end   TEXT NOT NULL DEFAULT ''`,
+		`ALTER TABLE providers   ADD COLUMN min_break_minutes  INTEGER NOT NULL DEFAULT 30`,
+	},
 }
 
 func Open(path string) (*sql.DB, error) {

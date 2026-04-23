@@ -42,6 +42,7 @@ func NewRouter(db *sql.DB, tc *transit.Client, assets fs.FS) http.Handler {
 			r.Get("/{id}", h.GetKita)
 			r.Put("/{id}", h.UpdateKita)
 			r.Delete("/{id}", h.DeleteKita)
+			r.Post("/{id}/lookup-stops", h.LookupStops)
 		})
 		r.Route("/assignments", func(r chi.Router) {
 			r.Get("/", h.ListAssignments)

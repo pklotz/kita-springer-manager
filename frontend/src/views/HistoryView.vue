@@ -12,13 +12,17 @@
     </div>
 
     <div v-for="month in months" :key="month.key" class="mb-6">
-      <div class="flex items-baseline justify-between mb-2 px-1">
+      <div class="flex items-baseline justify-between mb-2 px-1 gap-2">
         <h3 class="font-semibold text-gray-700">{{ month.label }}</h3>
-        <div class="text-xs text-gray-500">
+        <div class="flex items-baseline gap-3 text-xs text-gray-500">
           <span class="font-medium">{{ month.count }} Einsätze</span>
-          <span v-if="month.totalHours" class="ml-3">{{ month.totalHours }} h</span>
+          <span v-if="month.totalHours">{{ month.totalHours }} h netto</span>
           <span v-if="month.plannedHours && month.plannedHours !== month.totalHours"
-            class="ml-1 text-gray-400">(Soll {{ month.plannedHours }})</span>
+            class="text-gray-400">(Soll {{ month.plannedHours }})</span>
+          <RouterLink :to="`/worktime?month=${month.key}`"
+            class="text-brand-500 hover:text-brand-600 flex items-center gap-0.5">
+            Arbeitszeit <ArrowRight class="w-3 h-3" />
+          </RouterLink>
         </div>
       </div>
 
@@ -44,6 +48,14 @@
               · Ist {{ a.actual_start_time || '–' }}–{{ a.actual_end_time || '–' }}
             </span>
             <span v-else class="text-gray-400 italic">· Arbeitszeit fehlt</span>
+            <span v-if="hasActual(a)" class="text-gray-400">
+              · Netto {{ netHours(a) }} h
+              <span v-if="breakMin(a) > 0"
+                :class="breakWarn(a) ? 'text-red-600 font-medium' : ''"
+                :title="breakWarn(a) ? 'Pause unter Mindestmass' : ''">
+                · Pause {{ breakHm(a) }}
+              </span>
+            </span>
           </div>
         </div>
         <button @click="editAssignment = a"
@@ -64,11 +76,15 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
-import { ArrowLeft, Clock } from 'lucide-vue-next'
+import { RouterLink } from 'vue-router'
+import { ArrowLeft, ArrowRight, Clock } from 'lucide-vue-next'
 import dayjs from 'dayjs'
 import 'dayjs/locale/de'
 import { assignmentsApi } from '../api'
-import { diffMinutes, formatHours } from '../utils/time'
+import {
+  diffMinutes, formatHours, formatHm, netWorkMinutes, breakMinutes,
+  grossWorkMinutes, requiredBreakMinutes,
+} from '../utils/time'
 import AssignmentForm from '../components/AssignmentForm.vue'
 
 dayjs.locale('de')
@@ -80,9 +96,19 @@ const today = dayjs().format('YYYY-MM-DD')
 const day = (d) => dayjs(d).format('D')
 const weekday = (d) => dayjs(d).format('dd')
 const hasActual = (a) => a.actual_start_time || a.actual_end_time
+const netMin = (a) => netWorkMinutes(a.actual_start_time, a.actual_break_start, a.actual_break_end, a.actual_end_time)
+const netHours = (a) => formatHours(netMin(a))
+const breakMin = (a) => breakMinutes(a.actual_break_start, a.actual_break_end)
+const breakHm = (a) => formatHm(breakMin(a))
+const breakWarn = (a) => {
+  const req = requiredBreakMinutes(
+    grossWorkMinutes(a.actual_start_time, a.actual_end_time),
+    a.provider?.min_break_minutes || 0,
+  )
+  return req > 0 && breakMin(a) < req
+}
 const differs = (a) =>
-  hasActual(a) && diffMinutes(a.actual_start_time, a.actual_end_time)
-    !== diffMinutes(a.start_time, a.end_time)
+  hasActual(a) && netMin(a) !== diffMinutes(a.start_time, a.end_time)
 
 const months = computed(() => {
   const past = assignments.value
@@ -98,10 +124,10 @@ const months = computed(() => {
 
   return Object.keys(groups).sort().reverse().map(key => {
     const items = groups[key]
-    const totalMin = items.reduce(
-      (s, a) => s + diffMinutes(a.actual_start_time || a.start_time, a.actual_end_time || a.end_time),
-      0,
-    )
+    const totalMin = items.reduce((s, a) => {
+      if (hasActual(a)) return s + netMin(a)
+      return s + diffMinutes(a.start_time, a.end_time)
+    }, 0)
     const plannedMin = items.reduce(
       (s, a) => s + diffMinutes(a.start_time, a.end_time), 0,
     )

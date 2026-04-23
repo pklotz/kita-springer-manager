@@ -47,15 +47,31 @@
           leeren
         </button>
       </div>
-      <div class="flex gap-3">
-        <div class="flex-1">
-          <label class="block text-xs text-amber-800 mb-1">Beginn (Ist)</label>
+      <div class="grid grid-cols-2 gap-3 mb-2">
+        <div>
+          <label class="block text-xs text-amber-800 mb-1">Beginn</label>
           <TimeSelect v-model="form.actual_start_time" />
         </div>
-        <div class="flex-1">
-          <label class="block text-xs text-amber-800 mb-1">Ende (Ist)</label>
+        <div>
+          <label class="block text-xs text-amber-800 mb-1">Pause ab</label>
+          <TimeSelect v-model="form.actual_break_start" />
+        </div>
+        <div>
+          <label class="block text-xs text-amber-800 mb-1">Pause bis</label>
+          <TimeSelect v-model="form.actual_break_end" />
+        </div>
+        <div>
+          <label class="block text-xs text-amber-800 mb-1">Ende</label>
           <TimeSelect v-model="form.actual_end_time" />
         </div>
+      </div>
+      <div v-if="hasActual" class="text-xs text-amber-900 flex items-center gap-3 flex-wrap">
+        <span>Arbeit <strong>{{ netHm }} h</strong></span>
+        <span>·</span>
+        <span :class="breakWarn ? 'text-red-600 font-medium' : ''">
+          Pause {{ breakHm }} h
+          <span v-if="breakWarn" :title="breakWarnTitle">⚠</span>
+        </span>
       </div>
     </div>
 
@@ -82,6 +98,10 @@ import dayjs from 'dayjs'
 import { kitasApi, providersApi, assignmentsApi } from '../api'
 import Modal from './Modal.vue'
 import TimeSelect from './TimeSelect.vue'
+import {
+  netWorkMinutes, breakMinutes, grossWorkMinutes,
+  requiredBreakMinutes, legalMinBreakMinutes, formatHm,
+} from '../utils/time'
 
 const props = defineProps({ assignment: { type: Object, default: null } })
 const emit = defineEmits(['close', 'saved'])
@@ -93,7 +113,7 @@ const kitaSearch = ref('')
 const form = ref({
   kita_id: '', date: '',
   start_time: '07:00', end_time: '17:00',
-  actual_start_time: '', actual_end_time: '',
+  actual_start_time: '', actual_break_start: '', actual_break_end: '', actual_end_time: '',
   notes: '',
 })
 
@@ -105,11 +125,46 @@ const hasActual = computed(() => form.value.actual_start_time || form.value.actu
 const copyPlanToActual = () => {
   form.value.actual_start_time = form.value.start_time
   form.value.actual_end_time = form.value.end_time
+  form.value.actual_break_start = ''
+  form.value.actual_break_end = ''
 }
 const clearActual = () => {
   form.value.actual_start_time = ''
+  form.value.actual_break_start = ''
+  form.value.actual_break_end = ''
   form.value.actual_end_time = ''
 }
+
+// Live computations for the Ist-block
+const currentProvider = computed(() => {
+  const kita = kitas.value.find(k => k.id === form.value.kita_id)
+  if (!kita?.provider_id) return null
+  return providers.value.find(p => p.id === kita.provider_id) || null
+})
+const netHm = computed(() => formatHm(netWorkMinutes(
+  form.value.actual_start_time, form.value.actual_break_start,
+  form.value.actual_break_end, form.value.actual_end_time,
+)))
+const breakHm = computed(() => formatHm(breakMinutes(
+  form.value.actual_break_start, form.value.actual_break_end,
+)))
+const requiredMin = computed(() => requiredBreakMinutes(
+  grossWorkMinutes(form.value.actual_start_time, form.value.actual_end_time),
+  currentProvider.value?.min_break_minutes || 0,
+))
+const actualBreakMin = computed(() => breakMinutes(
+  form.value.actual_break_start, form.value.actual_break_end,
+))
+const breakWarn = computed(() => requiredMin.value > 0 && actualBreakMin.value < requiredMin.value)
+const breakWarnTitle = computed(() => {
+  const gross = grossWorkMinutes(form.value.actual_start_time, form.value.actual_end_time)
+  const legal = legalMinBreakMinutes(gross)
+  const provMin = currentProvider.value?.min_break_minutes || 0
+  const parts = []
+  if (legal > 0) parts.push(`${legal} min laut ArG Art. 15`)
+  if (provMin > 0) parts.push(`${provMin} min Trägervorgabe`)
+  return `Mindestpause: ${parts.join(', ') || '0'}`
+})
 
 const filteredKitas = computed(() => {
   let list = kitas.value
@@ -154,6 +209,8 @@ onMounted(async () => {
       start_time: a.start_time || '',
       end_time: a.end_time || '',
       actual_start_time: a.actual_start_time || '',
+      actual_break_start: a.actual_break_start || '',
+      actual_break_end: a.actual_break_end || '',
       actual_end_time: a.actual_end_time || '',
       notes: a.notes || '',
     }

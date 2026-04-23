@@ -38,6 +38,7 @@ export const kitasApi = {
   create: (data) => api.post('/kitas', data).then(r => r.data),
   update: (id, data) => api.put(`/kitas/${id}`, data).then(r => r.data),
   delete: (id) => api.delete(`/kitas/${id}`),
+  lookupStops: (id) => api.post(`/kitas/${id}/lookup-stops`).then(r => r.data),
 }
 
 export const assignmentsApi = {

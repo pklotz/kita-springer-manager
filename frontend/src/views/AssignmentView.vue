@@ -49,7 +49,9 @@
         <MapPin class="w-4 h-4 text-gray-400 mt-0.5" />
         <div>
           <div>{{ assignment.kita?.address || '–' }}</div>
-          <div class="text-sm text-gray-500">Haltestelle: {{ assignment.kita?.stop_name || '–' }}</div>
+          <div class="text-sm text-gray-500">
+            {{ kitaStops.length > 1 ? 'Haltestellen' : 'Haltestelle' }}: {{ kitaStops.join(' · ') || '–' }}
+          </div>
         </div>
       </div>
       <div v-if="assignment.notes" class="flex items-start gap-2 text-gray-700 mt-3 pt-3 border-t">
@@ -82,6 +84,11 @@
       <div v-else-if="error" class="bg-red-50 text-red-600 rounded-lg p-4 text-sm">{{ error }}</div>
       <div v-else-if="connections.length === 0" class="text-center text-gray-400 py-8">Keine Verbindungen gefunden</div>
 
+      <div v-if="walkToFirstStop > 0" class="flex items-center gap-2 text-sm text-gray-500 mb-2 pl-1">
+        <Footprints class="w-4 h-4" />
+        <span>~{{ walkToFirstStop }} Min Fussweg zur ersten Haltestelle</span>
+      </div>
+
       <ConnectionCard v-for="(c, i) in connections" :key="i" :connection="c" class="mb-3" />
     </template>
     <div v-else class="text-center text-gray-400 text-sm py-4 italic">
@@ -98,7 +105,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { ArrowLeft, Clock, MapPin, FileText, CheckCircle2, Pencil } from 'lucide-vue-next'
+import { ArrowLeft, Clock, MapPin, FileText, CheckCircle2, Pencil, Footprints } from 'lucide-vue-next'
 import dayjs from 'dayjs'
 import 'dayjs/locale/de'
 import { assignmentsApi, transitApi } from '../api'
@@ -112,6 +119,7 @@ const route = useRoute()
 const router = useRouter()
 const assignment = ref(null)
 const connections = ref([])
+const walkToFirstStop = ref(0)
 const loading = ref(false)
 const error = ref(null)
 const customTime = ref('')
@@ -123,6 +131,13 @@ const formatDate = (d) => dayjs(d).format('dddd, D. MMMM YYYY')
 const today = dayjs().format('YYYY-MM-DD')
 const isFuture = computed(() => assignment.value && assignment.value.date >= today)
 const isPastOrToday = computed(() => assignment.value && assignment.value.date <= today)
+
+const kitaStops = computed(() => {
+  const k = assignment.value?.kita
+  const stops = (k?.stops || []).filter(Boolean)
+  if (stops.length) return stops
+  return k?.stop_name ? [k.stop_name] : []
+})
 
 const hasActual = computed(() =>
   assignment.value && (assignment.value.actual_start_time || assignment.value.actual_end_time)
@@ -155,6 +170,7 @@ const loadConnections = async () => {
       is_arrival: isArrival.value ? '1' : '0',
     })
     connections.value = result.connections || []
+    walkToFirstStop.value = result.walk_to_first_stop_minutes || 0
   } catch (e) {
     error.value = e.response?.data?.error || 'Verbindungen konnten nicht geladen werden'
   } finally {

@@ -197,11 +197,13 @@
             </div>
 
             <!-- ÖV -->
-            <div v-if="selectedKita.stop_name">
+            <div v-if="displayStops(selectedKita).length">
               <div class="flex items-center gap-1.5 text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1.5">
-                <Bus class="w-3.5 h-3.5" /> ÖV-Haltestelle
+                <Bus class="w-3.5 h-3.5" /> ÖV-Haltestelle{{ displayStops(selectedKita).length > 1 ? 'n' : '' }}
               </div>
-              <p class="text-sm text-gray-700">{{ selectedKita.stop_name }}</p>
+              <ul class="text-sm text-gray-700 space-y-0.5">
+                <li v-for="s in displayStops(selectedKita)" :key="s">{{ s }}</li>
+              </ul>
             </div>
 
             <!-- Groups -->
@@ -255,6 +257,11 @@
             :class="['w-8 h-8 rounded-full shadow-sm transition-transform', form.color_hex === c ? 'scale-125 ring-2 ring-offset-2 ring-gray-400' : 'hover:scale-110']" />
           <input type="color" v-model="form.color_hex" class="w-8 h-8 rounded-full cursor-pointer border-0" />
         </div>
+
+        <label class="block text-sm text-gray-600 mb-1">Mindestpause (Minuten)</label>
+        <input v-model.number="form.min_break_minutes" type="number" min="0" step="5"
+          class="w-full rounded-lg border border-gray-200 px-3 py-2 mb-1 focus:outline-none focus:ring-2 focus:ring-brand-500" />
+        <p class="text-xs text-gray-500 mb-3">Zusätzlich zur gesetzlichen Pause (ArG Art. 15). Wird in der Arbeitszeit-Auswertung geprüft.</p>
 
         <details class="mb-4">
           <summary class="text-sm text-gray-500 cursor-pointer hover:text-gray-700">Erweiterte Excel-Konfiguration</summary>
@@ -310,8 +317,17 @@
         <input v-model="kitaForm.address" type="text" placeholder="Musterstrasse 1, 3000 Bern"
           class="w-full rounded-lg border border-gray-200 px-3 py-2 mb-3 focus:outline-none focus:ring-2 focus:ring-brand-500" />
 
-        <label class="block text-sm text-gray-600 mb-1">ÖV-Haltestelle</label>
-        <StopSearch v-model="kitaForm.stop_name" class="mb-3" />
+        <div class="flex items-center justify-between mb-1">
+          <label class="block text-sm text-gray-600">ÖV-Haltestellen (max. 2)</label>
+          <button @click="lookupStops" :disabled="!kitaForm.address || lookupLoading"
+            type="button"
+            class="flex items-center gap-1 text-xs text-brand-500 hover:text-brand-600 disabled:opacity-40 disabled:cursor-not-allowed">
+            <Search class="w-3 h-3" />
+            {{ lookupLoading ? 'Suche…' : 'Haltestellen suchen' }}
+          </button>
+        </div>
+        <StopSearch v-model="kitaForm.stops[0]" class="mb-2" />
+        <StopSearch v-model="kitaForm.stops[1]" class="mb-3" />
 
         <div class="flex gap-3 mb-3">
           <div class="flex-1">
@@ -417,7 +433,7 @@ const colors = ['#6366f1','#2563eb','#16a34a','#dc2626','#ea580c','#9333ea','#08
 
 // ── Provider form ────────────────────────────────────────────
 const defaultProviderForm = () => ({
-  name: '', color_hex: '#6366f1',
+  name: '', color_hex: '#6366f1', min_break_minutes: 30,
   excel_config: { header_row: 2, kita_row: 3, first_day_col: 'B', cols_per_day: 2, days_per_week: 5, kita_mapping: {} },
 })
 const form = ref(defaultProviderForm())
@@ -446,29 +462,60 @@ const confirmDelete = async (p) => {
 }
 
 // ── Kita form ─────────────────────────────────────────────────
-const kitaForm = ref({ name: '', provider_id: '', address: '', stop_name: '', phone: '', email: '', leitung_name: '', photo_url: '', notes: '', groups: [] })
+const emptyKitaForm = () => ({
+  name: '', provider_id: '', address: '', stop_name: '', stops: ['', ''],
+  phone: '', email: '', leitung_name: '', photo_url: '', notes: '', groups: [],
+})
+const kitaForm = ref(emptyKitaForm())
+const lookupLoading = ref(false)
+
+// Show up to 2 stops for a kita, falling back to the legacy stop_name field.
+const displayStops = (k) => {
+  const stops = (k?.stops || []).filter(Boolean)
+  if (stops.length) return stops
+  return k?.stop_name ? [k.stop_name] : []
+}
 
 const openKitaForm = (k) => {
   editingKita.value = k
   if (k) {
-    kitaForm.value = { ...k }
+    const existing = (k.stops && k.stops.length ? k.stops : (k.stop_name ? [k.stop_name] : []))
+    kitaForm.value = { ...k, stops: [existing[0] || '', existing[1] || ''] }
     groupsText.value = (k.groups || []).join('\n')
   } else {
-    kitaForm.value = { name: '', provider_id: filterProvider.value || '', address: '', stop_name: '', phone: '', email: '', leitung_name: '', photo_url: '', notes: '', groups: [] }
+    kitaForm.value = { ...emptyKitaForm(), provider_id: filterProvider.value || '' }
     groupsText.value = ''
   }
   showKitaForm.value = true
 }
 
+const lookupStops = async () => {
+  if (!editingKita.value) {
+    alert('Bitte zuerst die Kita speichern, dann können Haltestellen gesucht werden.')
+    return
+  }
+  lookupLoading.value = true
+  try {
+    const updated = await kitasApi.lookupStops(editingKita.value.id)
+    const stops = updated.stops || []
+    kitaForm.value.stops = [stops[0] || '', stops[1] || '']
+    kitaForm.value.stop_name = stops[0] || ''
+  } finally {
+    lookupLoading.value = false
+  }
+}
+
 const saveKita = async () => {
   kitaForm.value.groups = groupsText.value.split('\n').map(g => g.trim()).filter(Boolean)
+  const stops = (kitaForm.value.stops || []).map(s => (s || '').trim()).filter(Boolean)
+  const payload = { ...kitaForm.value, stops, stop_name: stops[0] || '' }
   if (editingKita.value) {
-    await kitasApi.update(editingKita.value.id, kitaForm.value)
+    const saved = await kitasApi.update(editingKita.value.id, payload)
     if (selectedKita.value?.id === editingKita.value.id) {
-      selectedKita.value = { ...kitaForm.value, id: editingKita.value.id }
+      selectedKita.value = saved
     }
   } else {
-    await kitasApi.create(kitaForm.value)
+    await kitasApi.create(payload)
   }
   showKitaForm.value = false
   load()

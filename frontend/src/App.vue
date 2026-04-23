@@ -5,6 +5,7 @@
         <span class="font-semibold text-lg">Kita Springer</span>
         <nav class="flex gap-4 text-sm">
           <RouterLink to="/" class="hover:text-blue-200 transition-colors" active-class="font-bold underline">Kalender</RouterLink>
+          <RouterLink to="/worktime" class="hover:text-blue-200 transition-colors" active-class="font-bold underline">Arbeitszeit</RouterLink>
           <RouterLink to="/providers" class="hover:text-blue-200 transition-colors" active-class="font-bold underline">Kitas</RouterLink>
           <RouterLink to="/settings" class="hover:text-blue-200 transition-colors" active-class="font-bold underline">Einstellungen</RouterLink>
         </nav>

@@ -3,6 +3,8 @@ package models
 type Settings struct {
 	HomeAddress  string       `json:"home_address"`
 	HomeStop     string       `json:"home_stop"`
+	HomeLat      float64      `json:"home_lat"`
+	HomeLng      float64      `json:"home_lng"`
 	UserName     string       `json:"user_name"`
 	TransitPrefs TransitPrefs `json:"transit_prefs"`
 }
