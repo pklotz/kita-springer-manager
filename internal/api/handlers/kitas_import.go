@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"fmt"
 	"net/http"
 	"strings"
 
@@ -92,8 +93,14 @@ func (h *Handler) ImportKitasExcel(w http.ResponseWriter, r *http.Request) {
 			PhotoURL:    cell(row, 8),
 		}
 
+		if err := validateKita(k); err != nil {
+			res.Warnings = append(res.Warnings, fmt.Sprintf("Zeile %d: %s", i+1, err.Error()))
+			res.Skipped++
+			continue
+		}
 		if err := store.CreateKita(h.db, k); err != nil {
-			res.Warnings = append(res.Warnings, "Zeile "+string(rune('0'+i+1))+": "+err.Error())
+			audit.L().Warn("kita.import.row", "row", i+1, "err", err.Error())
+			res.Warnings = append(res.Warnings, fmt.Sprintf("Zeile %d: konnte nicht gespeichert werden", i+1))
 			res.Skipped++
 			continue
 		}

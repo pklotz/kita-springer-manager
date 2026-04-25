@@ -30,12 +30,12 @@ func (h *Handler) CreateProvider(w http.ResponseWriter, r *http.Request) {
 		writeError(w, 400, "invalid request")
 		return
 	}
-	if p.Name == "" {
-		writeError(w, 400, "name required")
-		return
-	}
 	if p.ColorHex == "" {
 		p.ColorHex = "#6366f1"
+	}
+	if err := validateProvider(&p); err != nil {
+		writeError(w, 400, err.Error())
+		return
 	}
 	if err := store.CreateProvider(h.db, &p); err != nil {
 		serverError(w, err)
@@ -58,6 +58,10 @@ func (h *Handler) UpdateProvider(w http.ResponseWriter, r *http.Request) {
 	var p models.Provider
 	if err := decodeJSON(r, &p); err != nil {
 		writeError(w, 400, "invalid request")
+		return
+	}
+	if err := validateProvider(&p); err != nil {
+		writeError(w, 400, err.Error())
 		return
 	}
 	p.ID = id

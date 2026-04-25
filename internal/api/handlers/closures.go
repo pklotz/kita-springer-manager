@@ -29,8 +29,8 @@ func (h *Handler) CreateClosure(w http.ResponseWriter, r *http.Request) {
 		writeError(w, 400, "invalid JSON")
 		return
 	}
-	if c.Date == "" || c.Type == "" {
-		writeError(w, 400, "date and type required")
+	if err := validateClosure(&c); err != nil {
+		writeError(w, 400, err.Error())
 		return
 	}
 	if err := store.CreateClosure(h.db, &c); err != nil {

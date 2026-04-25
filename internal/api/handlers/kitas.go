@@ -39,8 +39,8 @@ func (h *Handler) CreateKita(w http.ResponseWriter, r *http.Request) {
 		writeError(w, 400, "invalid request")
 		return
 	}
-	if k.Name == "" {
-		writeError(w, 400, "name required")
+	if err := validateKita(&k); err != nil {
+		writeError(w, 400, err.Error())
 		return
 	}
 	if err := store.CreateKita(h.db, &k); err != nil {
@@ -64,6 +64,10 @@ func (h *Handler) UpdateKita(w http.ResponseWriter, r *http.Request) {
 	var k models.Kita
 	if err := decodeJSON(r, &k); err != nil {
 		writeError(w, 400, "invalid request")
+		return
+	}
+	if err := validateKita(&k); err != nil {
+		writeError(w, 400, err.Error())
 		return
 	}
 	k.ID = id

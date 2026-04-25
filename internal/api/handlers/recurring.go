@@ -28,8 +28,8 @@ func (h *Handler) CreateRecurring(w http.ResponseWriter, r *http.Request) {
 		writeError(w, 400, "invalid request")
 		return
 	}
-	if rec.ValidFrom == "" || rec.ValidUntil == "" {
-		writeError(w, 400, "valid_from and valid_until required")
+	if err := validateRecurring(&rec); err != nil {
+		writeError(w, 400, err.Error())
 		return
 	}
 	if err := store.CreateRecurring(h.db, &rec); err != nil {

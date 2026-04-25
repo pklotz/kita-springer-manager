@@ -32,6 +32,10 @@ func (h *Handler) UpdateSettings(w http.ResponseWriter, r *http.Request) {
 		writeError(w, 400, "unknown canton")
 		return
 	}
+	if err := validateSettings(&s); err != nil {
+		writeError(w, 400, err.Error())
+		return
+	}
 
 	// Re-geocode home address if it changed or coords are missing.
 	prev, _ := store.GetSettings(h.db)

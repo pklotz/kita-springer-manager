@@ -62,8 +62,8 @@ func (h *Handler) CreateAssignment(w http.ResponseWriter, r *http.Request) {
 		writeError(w, 400, "invalid request")
 		return
 	}
-	if a.KitaID == "" || a.Date == "" {
-		writeError(w, 400, "kita_id and date required")
+	if err := validateAssignment(&a); err != nil {
+		writeError(w, 400, err.Error())
 		return
 	}
 	if err := h.resolveAssignmentProvider(&a); err != nil {
@@ -101,8 +101,8 @@ func (h *Handler) UpdateAssignment(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	a.ID = id
-	if a.KitaID == "" || a.Date == "" {
-		writeError(w, 400, "kita_id and date required")
+	if err := validateAssignment(&a); err != nil {
+		writeError(w, 400, err.Error())
 		return
 	}
 	if err := h.resolveAssignmentProvider(&a); err != nil {
