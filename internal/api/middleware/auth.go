@@ -5,6 +5,7 @@ package middleware
 import (
 	"database/sql"
 	"net/http"
+	"strings"
 
 	"github.com/pak/kita-springer-manager/internal/store"
 )
@@ -13,14 +14,25 @@ import (
 // as an alternative to basic-auth so external clients (Apple Calendar,
 // browsers without our login dialog) can subscribe/download.
 var downloadTokenPaths = map[string]bool{
-	"/api/calendar.ics":     true,
-	"/api/worktime/export":  true,
+	"/api/calendar.ics":    true,
+	"/api/worktime/export": true,
 }
 
-// BasicAuth requires HTTP Basic Auth on every request, except:
-//   - the auth-status and -logout endpoints (always public);
-//   - everything while no password is configured (setup mode);
-//   - download endpoints called with a valid ?token=... parameter.
+// publicAPIPaths are /api/* endpoints that must be reachable without auth
+// for the SPA to bootstrap (status query) or to break out of a stuck
+// state (reset, logout).
+var publicAPIPaths = map[string]bool{
+	"/api/auth/status": true,
+	"/api/auth/logout": true,
+	"/api/auth/reset":  true,
+}
+
+// BasicAuth gates only /api/* routes. The static SPA shell (index.html, JS,
+// CSS, sw.js, manifest, icons) is served without auth — the bundle alone has
+// no data; it bootstraps by calling /api/auth/status and rendering either
+// the login or the setup screen. Protecting the static shell also prevented
+// stuck Service Workers from ever fetching a new /sw.js, because their
+// background update fetch had no credentials.
 //
 // On failure we return a plain 401 WITHOUT a WWW-Authenticate header — the
 // SPA renders its own login dialog. External clients (iOS Calendar) embed
@@ -31,7 +43,14 @@ func BasicAuth(db *sql.DB) func(http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			path := r.URL.Path
 
-			if path == "/api/auth/status" || path == "/api/auth/logout" {
+			// Static assets and SPA shell: always public.
+			if !strings.HasPrefix(path, "/api/") {
+				next.ServeHTTP(w, r)
+				return
+			}
+
+			// Always-open API endpoints (status / logout / reset).
+			if publicAPIPaths[path] {
 				next.ServeHTTP(w, r)
 				return
 			}
@@ -42,11 +61,12 @@ func BasicAuth(db *sql.DB) func(http.Handler) http.Handler {
 				return
 			}
 			if !configured {
+				// Setup mode: API is fully open until the first password is set.
 				next.ServeHTTP(w, r)
 				return
 			}
 
-			// Download-token bypass for subscription URLs.
+			// Download-token bypass for subscription URLs (Apple Calendar etc.).
 			if r.Method == http.MethodGet && downloadTokenPaths[path] {
 				if tok := r.URL.Query().Get("token"); tok != "" && store.VerifyDownloadToken(db, tok) {
 					next.ServeHTTP(w, r)

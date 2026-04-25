@@ -11,7 +11,7 @@ import './style.css'
 // On a version mismatch we unregister all service workers and clear all
 // caches once, then reload — guarantees the user never sits on a stale
 // pre-auth shell.
-const APP_VERSION = '3'
+const APP_VERSION = '4'
 
 async function purgeStaleServiceWorker() {
   if (localStorage.getItem('app_version') === APP_VERSION) return false

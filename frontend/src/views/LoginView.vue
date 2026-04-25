@@ -15,6 +15,11 @@
         class="w-full py-2.5 bg-brand-500 text-white rounded-xl font-semibold hover:bg-brand-600 disabled:opacity-60 transition-colors">
         {{ busy ? 'Prüfe…' : 'Anmelden' }}
       </button>
+
+      <p class="text-xs text-gray-400 mt-4 text-center">
+        Probleme beim Anmelden?
+        <a href="/api/auth/reset" class="underline hover:text-gray-600">App-Cache zurücksetzen</a>
+      </p>
     </div>
   </div>
 </template>

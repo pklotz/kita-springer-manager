@@ -75,6 +75,50 @@ func (h *Handler) Logout(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, 200, map[string]string{"status": "ok"})
 }
 
+// ResetApp is the manual escape hatch for clients stuck on a stale Service
+// Worker / cached bundle. The Clear-Site-Data response header tells modern
+// browsers to wipe all caches, all stored data, and unregister all SWs for
+// this origin. A small JS payload also runs the unregister manually as a
+// fallback for browsers with patchy Clear-Site-Data support (Safari).
+//
+// No auth required — the whole point is to be reachable when the user is
+// unable to even render the login screen because of a stuck SW.
+func (h *Handler) ResetApp(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Cache-Control", "no-store")
+	w.Header().Set("Clear-Site-Data", `"cache", "storage"`)
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	_, _ = w.Write([]byte(`<!doctype html>
+<html lang="de"><head><meta charset="utf-8"><title>App-Reset</title>
+<style>body{font-family:system-ui,sans-serif;max-width:480px;margin:4rem auto;padding:0 1rem;color:#374151}
+h1{font-size:1.25rem}.ok{color:#059669}</style></head>
+<body>
+<h1>App-Reset</h1>
+<p id="msg">Lösche Cache und Service Worker…</p>
+<script>
+(async () => {
+  try {
+    if ('serviceWorker' in navigator) {
+      const regs = await navigator.serviceWorker.getRegistrations()
+      await Promise.all(regs.map(r => r.unregister()))
+    }
+    if (window.caches) {
+      const keys = await caches.keys()
+      await Promise.all(keys.map(k => caches.delete(k)))
+    }
+    try { localStorage.clear() } catch {}
+    try { sessionStorage.clear() } catch {}
+    document.getElementById('msg').innerHTML =
+      '<span class="ok">Fertig.</span> Weiterleitung zur App…'
+    setTimeout(() => location.replace('/'), 800)
+  } catch (e) {
+    document.getElementById('msg').textContent =
+      'Reset fehlgeschlagen: ' + e + ' — bitte Browser-Daten manuell löschen.'
+  }
+})()
+</script>
+</body></html>`))
+}
+
 // GetDownloadToken returns the current ?token=... value for subscription URLs
 // (calendar.ics, worktime/export). Used by the Settings UI to render the
 // webcal:// link.

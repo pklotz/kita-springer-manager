@@ -15,6 +15,11 @@ export default defineConfig({
         navigateFallback: null,
         skipWaiting: true,
         clientsClaim: true,
+        // Wipe outdated precaches whenever a new SW activates. Without this,
+        // pre-PWA-config SWs keep serving stale JS until the precache hashes
+        // drift far enough to trigger eviction — observable as "old UI even
+        // after deploy".
+        cleanupOutdatedCaches: true,
         // /api/* and the index navigation must always go to the network so
         // basic-auth challenges and fresh data show up.
         navigateFallbackDenylist: [/^\/api\//],

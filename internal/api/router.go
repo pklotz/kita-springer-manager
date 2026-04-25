@@ -34,6 +34,7 @@ func NewRouter(db *sql.DB, tc *transit.Client, assets fs.FS) http.Handler {
 	r.Route("/api", func(r chi.Router) {
 		// Auth endpoints.
 		r.Get("/auth/status", h.GetAuthStatus)
+		r.Get("/auth/reset", h.ResetApp)
 		r.Post("/auth/setup", h.SetupAuth)
 		r.Post("/auth/logout", h.Logout)
 		r.Put("/auth/password", h.ChangePassword)
