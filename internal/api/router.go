@@ -69,6 +69,7 @@ func NewRouter(db *sql.DB, tc *transit.Client, assets fs.FS) http.Handler {
 			r.Get("/stops", h.SearchStops)
 		})
 		r.Get("/calendar.ics", h.GetCalendar)
+		r.Get("/worktime/export", h.ExportWorktimePDF)
 	})
 
 	fileServer := http.FileServer(http.FS(assets))

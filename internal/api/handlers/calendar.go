@@ -50,8 +50,15 @@ func (h *Handler) GetCalendar(w http.ResponseWriter, r *http.Request) {
 		if a.Kita.Address != "" {
 			fmt.Fprintf(&sb, "LOCATION:%s\r\n", a.Kita.Address)
 		}
+		var descParts []string
+		if a.GroupName != "" {
+			descParts = append(descParts, "Gruppe: "+a.GroupName)
+		}
 		if a.Notes != "" {
-			fmt.Fprintf(&sb, "DESCRIPTION:%s\r\n", a.Notes)
+			descParts = append(descParts, a.Notes)
+		}
+		if len(descParts) > 0 {
+			fmt.Fprintf(&sb, "DESCRIPTION:%s\r\n", strings.Join(descParts, `\n`))
 		}
 		fmt.Fprintf(&sb, "DTSTAMP:%s\r\n", dtstamp)
 		sb.WriteString("END:VEVENT\r\n")

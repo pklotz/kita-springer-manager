@@ -66,6 +66,10 @@ func (h *Handler) CreateAssignment(w http.ResponseWriter, r *http.Request) {
 		writeError(w, 400, "kita_id and date required")
 		return
 	}
+	if err := h.resolveAssignmentProvider(&a); err != nil {
+		writeError(w, err.status, err.msg)
+		return
+	}
 	if conflict, reason, err := store.FindAssignmentConflict(h.db, &a, ""); err != nil {
 		writeError(w, 500, err.Error())
 		return
@@ -97,6 +101,14 @@ func (h *Handler) UpdateAssignment(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	a.ID = id
+	if a.KitaID == "" || a.Date == "" {
+		writeError(w, 400, "kita_id and date required")
+		return
+	}
+	if err := h.resolveAssignmentProvider(&a); err != nil {
+		writeError(w, err.status, err.msg)
+		return
+	}
 	if conflict, reason, err := store.FindAssignmentConflict(h.db, &a, id); err != nil {
 		writeError(w, 500, err.Error())
 		return
@@ -109,6 +121,29 @@ func (h *Handler) UpdateAssignment(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, 200, a)
+}
+
+type httpErr struct {
+	status int
+	msg    string
+}
+
+// resolveAssignmentProvider looks up the kita for a.KitaID and overrides
+// a.ProviderID with the kita's provider. Any client-supplied provider_id
+// is discarded — the server is authoritative.
+func (h *Handler) resolveAssignmentProvider(a *models.Assignment) *httpErr {
+	kita, err := store.GetKita(h.db, a.KitaID)
+	if err != nil {
+		return &httpErr{500, err.Error()}
+	}
+	if kita == nil {
+		return &httpErr{400, "unknown kita_id"}
+	}
+	if kita.ProviderID == "" {
+		return &httpErr{400, "kita has no provider"}
+	}
+	a.ProviderID = kita.ProviderID
+	return nil
 }
 
 func (h *Handler) DeleteAssignment(w http.ResponseWriter, r *http.Request) {

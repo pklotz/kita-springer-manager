@@ -26,6 +26,14 @@ func (h *Handler) UpdateSettings(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if s.Canton == "" {
+		s.Canton = "BE"
+	}
+	if !store.IsValidCanton(s.Canton) {
+		writeError(w, 400, "unknown canton")
+		return
+	}
+
 	// Re-geocode home address if it changed or coords are missing.
 	prev, _ := store.GetSettings(h.db)
 	addr := strings.TrimSpace(s.HomeAddress)
@@ -45,5 +53,12 @@ func (h *Handler) UpdateSettings(w http.ResponseWriter, r *http.Request) {
 		writeError(w, 500, err.Error())
 		return
 	}
+
+	if prev == nil || prev.Canton != s.Canton {
+		if err := store.ReseedHolidays(h.db, s.Canton); err != nil {
+			log.Printf("reseed holidays for %s: %v", s.Canton, err)
+		}
+	}
+
 	writeJSON(w, 200, s)
 }

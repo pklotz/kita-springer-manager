@@ -129,6 +129,10 @@ var migrations = [][]string{
 		`ALTER TABLE assignments ADD COLUMN actual_break_end   TEXT NOT NULL DEFAULT ''`,
 		`ALTER TABLE providers   ADD COLUMN min_break_minutes  INTEGER NOT NULL DEFAULT 30`,
 	},
+	// v9: drop old holiday seed so it can be repopulated per-canton by rickar/cal
+	{
+		`DELETE FROM closures WHERE type='holiday'`,
+	},
 }
 
 func Open(path string) (*sql.DB, error) {

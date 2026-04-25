@@ -52,7 +52,7 @@
       </div>
       <div class="flex items-center gap-2 text-xs font-medium text-gray-600">
         <span class="w-3.5 h-3.5 rounded-full bg-blue-100 border border-blue-200" />
-        Frei / Schule
+        Frei
       </div>
       <div class="flex items-center gap-2 text-xs font-medium text-gray-600">
         <span class="w-3.5 h-3.5 rounded-sm bg-emerald-100 border border-emerald-200" />
@@ -136,5 +136,5 @@ const cells = computed(() => {
 })
 
 const providerColor = (a) => a.provider?.color_hex || '#6366f1'
-const assignmentLabel = (a) => a.group_name || a.kita?.name || '–'
+const assignmentLabel = (a) => a.kita?.name || a.group_name || '–'
 </script>

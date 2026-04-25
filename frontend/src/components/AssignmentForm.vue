@@ -19,6 +19,15 @@
       <option v-for="k in filteredKitas" :key="k.id" :value="k.id">{{ k.name }}</option>
     </select>
 
+    <template v-if="groupOptions.length">
+      <label class="block text-sm text-gray-600 mb-1">Gruppe</label>
+      <select v-model="form.group_name"
+        class="w-full rounded-lg border border-gray-200 px-3 py-2 mb-3 focus:outline-none focus:ring-2 focus:ring-brand-500">
+        <option value="">— keine —</option>
+        <option v-for="g in groupOptions" :key="g" :value="g">{{ g }}</option>
+      </select>
+    </template>
+
     <label class="block text-sm text-gray-600 mb-1">Datum *</label>
     <input type="date" v-model="form.date"
       class="w-full rounded-lg border border-gray-200 px-3 py-2 mb-3 focus:outline-none focus:ring-2 focus:ring-brand-500" />
@@ -92,7 +101,7 @@
 </template>
 
 <script setup>
-import { ref, computed, watch, onMounted } from 'vue'
+import { ref, computed, watch, onMounted, nextTick } from 'vue'
 import { Search, Trash2 } from 'lucide-vue-next'
 import dayjs from 'dayjs'
 import { kitasApi, providersApi, assignmentsApi } from '../api'
@@ -114,6 +123,7 @@ const form = ref({
   kita_id: '', date: '',
   start_time: '07:00', end_time: '17:00',
   actual_start_time: '', actual_break_start: '', actual_break_end: '', actual_end_time: '',
+  group_name: '',
   notes: '',
 })
 
@@ -182,6 +192,50 @@ watch(selectedProvider, () => {
   }
 })
 
+// Auto-set des Trägers, wenn eine Kita gewählt wird (UX-Spiegel des
+// serverseitig autoritativ abgeleiteten provider_id).
+watch(() => form.value.kita_id, (id) => {
+  if (!id) return
+  const kita = kitas.value.find(k => k.id === id)
+  if (kita?.provider_id && selectedProvider.value !== kita.provider_id) {
+    selectedProvider.value = kita.provider_id
+  }
+  // Wenn aktuell ausgewählte Gruppe nicht zur neuen Kita gehört, leeren.
+  if (form.value.group_name && !groupOptions.value.includes(form.value.group_name)) {
+    form.value.group_name = ''
+  }
+})
+
+// Gruppen-Auswahl basiert auf den Stammdaten der gewählten Kita.
+// Falls eine bestehende Zuordnung einen Wert enthält, der nicht (mehr) in
+// den Stammdaten steht, wird er trotzdem als Option mitgeführt.
+const groupOptions = computed(() => {
+  const kita = kitas.value.find(k => k.id === form.value.kita_id)
+  const fromKita = kita?.groups || []
+  const set = new Set(fromKita)
+  if (form.value.group_name && !set.has(form.value.group_name)) {
+    return [form.value.group_name, ...fromKita]
+  }
+  return fromKita
+})
+
+// Wenn Ist-Zeit dem alten Soll entsprach (also nie manuell abweichend gesetzt),
+// soll sie einer Korrektur des Soll folgen. Sonst nicht anfassen.
+// Erst nach onMounted aktiv, damit das initiale form-Setup nicht triggert.
+const autoSyncReady = ref(false)
+watch(() => form.value.start_time, (newVal, oldVal) => {
+  if (!autoSyncReady.value) return
+  if (form.value.actual_start_time === oldVal) {
+    form.value.actual_start_time = newVal
+  }
+})
+watch(() => form.value.end_time, (newVal, oldVal) => {
+  if (!autoSyncReady.value) return
+  if (form.value.actual_end_time === oldVal) {
+    form.value.actual_end_time = newVal
+  }
+})
+
 const save = async () => {
   if (props.assignment) {
     await assignmentsApi.update(props.assignment.id, form.value)
@@ -212,6 +266,7 @@ onMounted(async () => {
       actual_break_start: a.actual_break_start || '',
       actual_break_end: a.actual_break_end || '',
       actual_end_time: a.actual_end_time || '',
+      group_name: a.group_name || '',
       notes: a.notes || '',
     }
     const kita = kitas.value.find(k => k.id === a.kita_id)
@@ -222,5 +277,7 @@ onMounted(async () => {
       copyPlanToActual()
     }
   }
+  await nextTick()
+  autoSyncReady.value = true
 })
 </script>

@@ -43,8 +43,8 @@ make frontend-build     # Production-Build nach frontend/dist
 
 ```bash
 make frontend-build     # zuerst Assets bauen — werden per go:embed eingebettet
-make build              # bin/server
-./bin/server
+make build              # bin/kita-springer
+./bin/kita-springer
 ```
 
 ### Konfiguration
@@ -59,7 +59,7 @@ Server-Flags bzw. Env-Variablen (Flag hat Vorrang):
 Beispiel:
 
 ```bash
-ADDR=:8080 DB_PATH=/var/lib/kita/app.db ./bin/server
+ADDR=:8080 DB_PATH=/var/lib/kita/app.db ./bin/kita-springer
 ```
 
 ## Scraper

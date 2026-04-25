@@ -54,7 +54,7 @@
 
               <!-- Departure -->
               <div class="flex items-baseline gap-2 mb-1 relative">
-                <span class="absolute left-0 top-1.5 w-2.5 h-2.5 rounded-full bg-brand-500 border-2 border-white ring-1 ring-brand-500" />
+                <span class="absolute -left-4 top-1.5 w-2.5 h-2.5 rounded-full bg-brand-500 border-2 border-white ring-1 ring-brand-500" />
                 <span class="font-mono text-sm font-semibold text-gray-800 shrink-0 w-10">{{ fmt(s.departure?.departure) }}</span>
                 <span class="text-sm text-gray-700 truncate">{{ s.departure?.station?.name }}</span>
                 <span v-if="s.departure?.platform" class="text-[11px] text-gray-400 shrink-0 ml-auto">
@@ -64,7 +64,7 @@
 
               <!-- Arrival -->
               <div class="flex items-baseline gap-2 relative">
-                <span class="absolute left-0 top-1.5 w-2.5 h-2.5 rounded-full bg-white border-2 border-gray-400" />
+                <span class="absolute -left-4 top-1.5 w-2.5 h-2.5 rounded-full bg-white border-2 border-gray-400" />
                 <span class="font-mono text-sm font-semibold text-gray-800 shrink-0 w-10">{{ fmt(s.arrival?.arrival) }}</span>
                 <span class="text-sm text-gray-700 truncate">{{ s.arrival?.station?.name }}</span>
                 <span v-if="s.arrival?.platform" class="text-[11px] text-gray-400 shrink-0 ml-auto">

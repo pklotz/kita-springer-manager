@@ -1,5 +1,36 @@
 <template>
-  <table class="w-full text-sm">
+  <!-- Mobile: cards (< sm). Same data, stacked layout — no horizontal scroll. -->
+  <div class="sm:hidden divide-y divide-gray-100">
+    <button v-for="a in rows" :key="a.id" type="button"
+      class="w-full text-left px-3 py-2.5 hover:bg-gray-50 active:bg-gray-100 transition-colors"
+      @click="$router.push(`/assignments/${a.id}`)">
+      <div class="flex items-baseline gap-2">
+        <span class="text-[10px] uppercase text-gray-400 w-5 shrink-0 tabular-nums">{{ weekday(a.date) }}</span>
+        <span class="font-medium text-gray-800 shrink-0 tabular-nums">{{ dayLabel(a.date) }}</span>
+        <span class="text-gray-700 truncate flex-1 min-w-0">{{ a.kita?.name || '–' }}</span>
+        <span class="font-semibold text-gray-800 tabular-nums shrink-0">{{ formatHm(netMin(a)) }}</span>
+      </div>
+      <div class="text-xs text-gray-500 mt-0.5 flex flex-wrap gap-x-2 ml-7">
+        <span v-if="morningRange(a)" class="tabular-nums">{{ morningRange(a) }}</span>
+        <span v-if="afternoonRange(a)" class="tabular-nums">· {{ afternoonRange(a) }}</span>
+        <span v-if="breakMin(a) > 0" class="tabular-nums"
+          :class="breakWarn(a) ? 'text-red-600 font-medium' : ''"
+          :title="breakWarn(a) ? breakWarnTitle(a) : ''">
+          · Pause {{ formatHm(breakMin(a)) }}
+        </span>
+      </div>
+    </button>
+    <div class="px-3 py-2.5 bg-gray-50 flex items-center text-sm">
+      <span class="font-medium text-gray-700 flex-1">{{ totals.count }} Einsätze</span>
+      <span v-if="totals.breaches" class="text-xs text-red-600 mr-3">
+        {{ totals.breaches }} × Pause zu kurz
+      </span>
+      <span class="font-semibold text-gray-800 tabular-nums">{{ formatHm(totals.netMin) }}</span>
+    </div>
+  </div>
+
+  <!-- Tablet+ (≥ sm): full table. -->
+  <table class="hidden sm:table w-full text-sm">
     <thead class="bg-gray-50 text-gray-500 text-xs uppercase">
       <tr>
         <th class="text-left px-3 py-2 font-medium">Datum</th>

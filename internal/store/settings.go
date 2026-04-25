@@ -31,6 +31,10 @@ func GetSettings(db *sql.DB) (*models.Settings, error) {
 	s.HomeAddress = kv["home_address"]
 	s.HomeStop = kv["home_stop"]
 	s.UserName = kv["user_name"]
+	s.Canton = kv["canton"]
+	if s.Canton == "" {
+		s.Canton = "BE"
+	}
 	if v, err := strconv.ParseFloat(kv["home_lat"], 64); err == nil {
 		s.HomeLat = v
 	}
@@ -72,6 +76,7 @@ func SaveSettings(db *sql.DB, s *models.Settings) error {
 		{"home_lat", latStr},
 		{"home_lng", lngStr},
 		{"user_name", s.UserName},
+		{"canton", s.Canton},
 		{"transit_prefs", string(prefsJSON)},
 	} {
 		if err := upsert(kv[0], kv[1]); err != nil {

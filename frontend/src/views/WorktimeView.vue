@@ -21,6 +21,11 @@
         <input type="checkbox" v-model="groupByProvider" class="rounded">
         Nach Träger gruppieren
       </label>
+
+      <a v-if="filteredItems.length" :href="exportUrl" download
+        class="inline-flex items-center gap-1 text-sm bg-brand-500 text-white px-3 py-2 rounded-lg hover:bg-brand-600 transition-colors">
+        PDF
+      </a>
     </div>
 
     <!-- Empty state -->
@@ -31,24 +36,29 @@
       Keine Einsätze in diesem Monat{{ filterProvider ? ' für diesen Träger' : '' }}
     </div>
 
-    <!-- Flat table (ungrouped) -->
-    <div v-else-if="!groupByProvider" class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-      <WorktimeTable :rows="filteredItems" :totals="totals(filteredItems)" />
-    </div>
+    <template v-if="filteredItems.length">
+      <!-- Chart: Stunden pro Tag -->
+      <WorktimeChart :items="filteredItems" :month="selectedMonth" />
 
-    <!-- Grouped by provider -->
-    <div v-else>
-      <div v-for="g in groupedItems" :key="g.providerId" class="mb-4">
-        <div class="flex items-center gap-2 mb-2 px-1">
-          <span v-if="g.providerColor" class="w-3 h-3 rounded-full"
-            :style="{ backgroundColor: g.providerColor }" />
-          <h3 class="font-semibold text-gray-700">{{ g.providerName || '– ohne Träger –' }}</h3>
-        </div>
-        <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-          <WorktimeTable :rows="g.items" :totals="totals(g.items)" />
+      <!-- Flat table (ungrouped) -->
+      <div v-if="!groupByProvider" class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+        <WorktimeTable :rows="filteredItems" :totals="totals(filteredItems)" />
+      </div>
+
+      <!-- Grouped by provider -->
+      <div v-else>
+        <div v-for="g in groupedItems" :key="g.providerId" class="mb-4">
+          <div class="flex items-center gap-2 mb-2 px-1">
+            <span v-if="g.providerColor" class="w-3 h-3 rounded-full"
+              :style="{ backgroundColor: g.providerColor }" />
+            <h3 class="font-semibold text-gray-700">{{ g.providerName || '– ohne Träger –' }}</h3>
+          </div>
+          <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+            <WorktimeTable :rows="g.items" :totals="totals(g.items)" />
+          </div>
         </div>
       </div>
-    </div>
+    </template>
   </div>
 </template>
 
@@ -62,6 +72,7 @@ import {
   netWorkMinutes, breakMinutes, grossWorkMinutes, requiredBreakMinutes,
 } from '../utils/time'
 import WorktimeTable from '../components/WorktimeTable.vue'
+import WorktimeChart from '../components/WorktimeChart.vue'
 
 dayjs.locale('de')
 
@@ -127,6 +138,12 @@ const providersInMonth = computed(() => {
 const filteredItems = computed(() => {
   if (!filterProvider.value) return itemsOfMonth.value
   return itemsOfMonth.value.filter(a => a.provider?.id === filterProvider.value)
+})
+
+const exportUrl = computed(() => {
+  const params = new URLSearchParams({ month: selectedMonth.value })
+  if (filterProvider.value) params.set('provider_id', filterProvider.value)
+  return `/api/worktime/export?${params.toString()}`
 })
 
 const groupedItems = computed(() => {

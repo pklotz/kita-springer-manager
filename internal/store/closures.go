@@ -2,10 +2,14 @@ package store
 
 import (
 	"database/sql"
+	"fmt"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
 	"github.com/pak/kita-springer-manager/internal/models"
+	"github.com/rickar/cal/v2"
+	"github.com/rickar/cal/v2/ch"
 )
 
 func ListClosures(db *sql.DB, from, to, closureType string) ([]models.Closure, error) {
@@ -88,61 +92,62 @@ func ClosureDates(db *sql.DB, from, to, providerID, kitaID string) (map[string]b
 	return set, rows.Err()
 }
 
-// SeedHolidays inserts Bern canton public holidays for the given year.
+// cantonHolidayLists maps ISO 3166-2:CH canton codes to the holiday list
+// defined by github.com/rickar/cal/v2/ch.
+var cantonHolidayLists = map[string][]*cal.Holiday{
+	"AG": ch.HolidaysAG, "AI": ch.HolidaysAI, "AR": ch.HolidaysAR,
+	"BE": ch.HolidaysBE, "BL": ch.HolidaysBL, "BS": ch.HolidaysBS,
+	"FR": ch.HolidaysFR, "GE": ch.HolidaysGE, "GL": ch.HolidaysGL,
+	"GR": ch.HolidaysGR, "JU": ch.HolidaysJU, "LU": ch.HolidaysLU,
+	"NE": ch.HolidaysNE, "NW": ch.HolidaysNW, "OW": ch.HolidaysOW,
+	"SG": ch.HolidaysSG, "SH": ch.HolidaysSH, "SO": ch.HolidaysSO,
+	"SZ": ch.HolidaysSZ, "TG": ch.HolidaysTG, "TI": ch.HolidaysTI,
+	"UR": ch.HolidaysUR, "VD": ch.HolidaysVD, "VS": ch.HolidaysVS,
+	"ZG": ch.HolidaysZG, "ZH": ch.HolidaysZH,
+}
+
+// IsValidCanton reports whether the given code is a supported CH canton.
+func IsValidCanton(canton string) bool {
+	_, ok := cantonHolidayLists[strings.ToUpper(canton)]
+	return ok
+}
+
+// SeedHolidays inserts public holidays for the given canton and year.
 // The unique index on (type, date, reference_id) makes this idempotent.
-func SeedHolidays(db *sql.DB, year int) error {
-	for _, h := range bernHolidays(year) {
-		if err := CreateClosure(db, &h); err != nil {
+func SeedHolidays(db *sql.DB, canton string, year int) error {
+	list, ok := cantonHolidayLists[strings.ToUpper(canton)]
+	if !ok {
+		return fmt.Errorf("unknown canton %q", canton)
+	}
+	for _, h := range list {
+		actual, _ := h.Calc(year)
+		if actual.IsZero() {
+			continue
+		}
+		c := models.Closure{
+			Type: models.ClosureHoliday,
+			Date: actual.Format("2006-01-02"),
+			Note: h.Name,
+		}
+		if err := CreateClosure(db, &c); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-func bernHolidays(year int) []models.Closure {
-	easter := easterSunday(year)
-	type entry struct {
-		t    time.Time
-		name string
+// ReseedHolidays wipes all holiday closures and re-seeds them for the given
+// canton and a window of [currentYear, currentYear+2]. Called on server start
+// and whenever the canton setting changes.
+func ReseedHolidays(db *sql.DB, canton string) error {
+	if _, err := db.Exec(`DELETE FROM closures WHERE type='holiday'`); err != nil {
+		return err
 	}
-	dates := []entry{
-		{time.Date(year, 1, 1, 0, 0, 0, 0, time.UTC), "Neujahr"},
-		{time.Date(year, 1, 2, 0, 0, 0, 0, time.UTC), "Berchtoldstag"},
-		{easter.AddDate(0, 0, -2), "Karfreitag"},
-		{easter.AddDate(0, 0, 1), "Ostermontag"},
-		{time.Date(year, 5, 1, 0, 0, 0, 0, time.UTC), "Tag der Arbeit"},
-		{easter.AddDate(0, 0, 39), "Auffahrt"},
-		{easter.AddDate(0, 0, 50), "Pfingstmontag"},
-		{time.Date(year, 8, 1, 0, 0, 0, 0, time.UTC), "Bundesfeier"},
-		{time.Date(year, 12, 25, 0, 0, 0, 0, time.UTC), "Weihnachten"},
-		{time.Date(year, 12, 26, 0, 0, 0, 0, time.UTC), "Stephanstag"},
-	}
-	out := make([]models.Closure, len(dates))
-	for i, d := range dates {
-		out[i] = models.Closure{
-			Type: models.ClosureHoliday,
-			Date: d.t.Format("2006-01-02"),
-			Note: d.name,
+	year := time.Now().Year()
+	for y := year; y <= year+2; y++ {
+		if err := SeedHolidays(db, canton, y); err != nil {
+			return err
 		}
 	}
-	return out
-}
-
-// easterSunday computes Easter Sunday using the Anonymous Gregorian algorithm.
-func easterSunday(year int) time.Time {
-	a := year % 19
-	b := year / 100
-	c := year % 100
-	d := b / 4
-	e := b % 4
-	f := (b + 8) / 25
-	g := (b - f + 1) / 3
-	h := (19*a + b - d - g + 15) % 30
-	i := c / 4
-	k := c % 4
-	l := (32 + 2*e + 2*i - h - k) % 7
-	m := (a + 11*h + 22*l) / 451
-	month := (h + l - 7*m + 114) / 31
-	day := ((h+l-7*m+114)%31) + 1
-	return time.Date(year, time.Month(month), day, 0, 0, 0, 0, time.UTC)
+	return nil
 }

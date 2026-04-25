@@ -21,23 +21,37 @@ import (
 
 func main() {
 	addr := flag.String("addr", envOr("ADDR", ":9092"), "HTTP listen address (env ADDR)")
-	dbPath := flag.String("db", envOr("DB_PATH", "data/app.db"), "SQLite database file (env DB_PATH)")
+	dbPath := flag.String("db", envOr("DB_PATH", defaultDBPath()), "SQLite database file (env DB_PATH)")
 	flag.Parse()
 
-	if err := os.MkdirAll(filepath.Dir(*dbPath), 0o755); err != nil {
+	absDB, _ := filepath.Abs(*dbPath)
+	if err := os.MkdirAll(filepath.Dir(absDB), 0o755); err != nil {
 		log.Fatalf("create db dir: %v", err)
 	}
+	if _, err := os.Stat(absDB); os.IsNotExist(err) {
+		log.Printf("Datenbank nicht gefunden — neue Datenbank wird angelegt: %s", absDB)
+	} else {
+		log.Printf("Datenbank: %s", absDB)
+	}
 
-	database, err := db.Open(*dbPath)
+	database, err := db.Open(absDB)
 	if err != nil {
 		log.Fatalf("open db: %v", err)
 	}
 	defer database.Close()
 
+	settings, err := store.GetSettings(database)
+	if err != nil {
+		log.Fatalf("read settings: %v", err)
+	}
+	canton := settings.Canton
+	if !store.IsValidCanton(canton) {
+		canton = "BE"
+	}
 	thisYear := time.Now().Year()
 	for y := thisYear; y <= thisYear+2; y++ {
-		if err := store.SeedHolidays(database, y); err != nil {
-			log.Printf("warn: seed holidays %d: %v", y, err)
+		if err := store.SeedHolidays(database, canton, y); err != nil {
+			log.Printf("warn: seed holidays %d (%s): %v", y, canton, err)
 		}
 	}
 
@@ -79,4 +93,14 @@ func envOr(key, fallback string) string {
 		return v
 	}
 	return fallback
+}
+
+// defaultDBPath returns data/app.db relative to the binary's directory,
+// so the server can be run from any working directory.
+func defaultDBPath() string {
+	exe, err := os.Executable()
+	if err != nil {
+		return "data/app.db"
+	}
+	return filepath.Join(filepath.Dir(exe), "data", "app.db")
 }

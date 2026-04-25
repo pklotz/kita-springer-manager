@@ -6,6 +6,7 @@ type Settings struct {
 	HomeLat      float64      `json:"home_lat"`
 	HomeLng      float64      `json:"home_lng"`
 	UserName     string       `json:"user_name"`
+	Canton       string       `json:"canton"` // ISO 3166-2:CH code, e.g. "BE"
 	TransitPrefs TransitPrefs `json:"transit_prefs"`
 }
 
