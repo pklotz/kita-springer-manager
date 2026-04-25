@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/pak/kita-springer-manager/internal/audit"
 	"github.com/pak/kita-springer-manager/internal/models"
 	"github.com/pak/kita-springer-manager/internal/store"
 	"github.com/xuri/excelize/v2"
@@ -34,20 +35,22 @@ func (h *Handler) ImportKitasExcel(w http.ResponseWriter, r *http.Request) {
 
 	f, err := excelize.OpenReader(file)
 	if err != nil {
-		writeError(w, 422, "cannot open Excel: "+err.Error())
+		audit.L().Warn("excel.open", "err", err.Error())
+		writeError(w, 422, "Excel-Datei kann nicht geöffnet werden")
 		return
 	}
 	defer f.Close()
 
 	sheets := f.GetSheetList()
 	if len(sheets) == 0 {
-		writeError(w, 422, "Excel has no sheets")
+		writeError(w, 422, "Excel-Datei enthält kein Blatt")
 		return
 	}
 
 	rows, err := f.GetRows(sheets[0])
 	if err != nil {
-		writeError(w, 422, "cannot read sheet: "+err.Error())
+		audit.L().Warn("excel.read", "err", err.Error())
+		writeError(w, 422, "Excel-Blatt kann nicht gelesen werden")
 		return
 	}
 

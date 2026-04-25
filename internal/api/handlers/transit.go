@@ -28,7 +28,7 @@ func (h *Handler) GetConnections(w http.ResponseWriter, r *http.Request) {
 	if from != "" && to != "" {
 		result, err := h.transit.GetConnections(from, to, date, timeStr, limit, isArrival)
 		if err != nil {
-			writeError(w, 502, "transit API error: "+err.Error())
+			upstreamError(w, err, "ÖV-API nicht erreichbar")
 			return
 		}
 		writeJSON(w, 200, map[string]any{
@@ -167,7 +167,7 @@ func (h *Handler) SearchStops(w http.ResponseWriter, r *http.Request) {
 	}
 	result, err := h.transit.SearchStops(query)
 	if err != nil {
-		writeError(w, 502, "transit API error: "+err.Error())
+		upstreamError(w, err, "ÖV-API nicht erreichbar")
 		return
 	}
 	writeJSON(w, 200, result)

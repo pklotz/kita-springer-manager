@@ -12,7 +12,7 @@ import (
 func (h *Handler) GetCalendar(w http.ResponseWriter, r *http.Request) {
 	assignments, err := store.ListAssignments(h.db, "", "")
 	if err != nil {
-		http.Error(w, err.Error(), 500)
+		serverError(w, err)
 		return
 	}
 

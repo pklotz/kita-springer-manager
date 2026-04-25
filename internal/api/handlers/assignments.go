@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/pak/kita-springer-manager/internal/audit"
 	"github.com/pak/kita-springer-manager/internal/models"
 	"github.com/pak/kita-springer-manager/internal/store"
 )
@@ -33,7 +34,7 @@ func (h *Handler) ListAssignments(w http.ResponseWriter, r *http.Request) {
 	to := r.URL.Query().Get("to")
 	assignments, err := store.ListAssignments(h.db, from, to)
 	if err != nil {
-		writeError(w, 500, err.Error())
+		serverError(w, err)
 		return
 	}
 	if assignments == nil {
@@ -45,7 +46,7 @@ func (h *Handler) ListAssignments(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) GetAssignment(w http.ResponseWriter, r *http.Request) {
 	a, err := store.GetAssignment(h.db, chi.URLParam(r, "id"))
 	if err != nil {
-		writeError(w, 500, err.Error())
+		serverError(w, err)
 		return
 	}
 	if a == nil {
@@ -70,14 +71,14 @@ func (h *Handler) CreateAssignment(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if conflict, reason, err := store.FindAssignmentConflict(h.db, &a, ""); err != nil {
-		writeError(w, 500, err.Error())
+		serverError(w, err)
 		return
 	} else if conflict != nil {
 		writeError(w, 409, conflictMessage(reason, conflict))
 		return
 	}
 	if err := store.CreateAssignment(h.db, &a); err != nil {
-		writeError(w, 500, err.Error())
+		serverError(w, err)
 		return
 	}
 	writeJSON(w, 201, a)
@@ -87,7 +88,7 @@ func (h *Handler) UpdateAssignment(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
 	existing, err := store.GetAssignment(h.db, id)
 	if err != nil {
-		writeError(w, 500, err.Error())
+		serverError(w, err)
 		return
 	}
 	if existing == nil {
@@ -109,14 +110,14 @@ func (h *Handler) UpdateAssignment(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if conflict, reason, err := store.FindAssignmentConflict(h.db, &a, id); err != nil {
-		writeError(w, 500, err.Error())
+		serverError(w, err)
 		return
 	} else if conflict != nil {
 		writeError(w, 409, conflictMessage(reason, conflict))
 		return
 	}
 	if err := store.UpdateAssignment(h.db, &a); err != nil {
-		writeError(w, 500, err.Error())
+		serverError(w, err)
 		return
 	}
 	writeJSON(w, 200, a)
@@ -133,7 +134,10 @@ type httpErr struct {
 func (h *Handler) resolveAssignmentProvider(a *models.Assignment) *httpErr {
 	kita, err := store.GetKita(h.db, a.KitaID)
 	if err != nil {
-		return &httpErr{500, err.Error()}
+		// Log the underlying DB error for diagnostics, but surface a generic
+		// message to the client.
+		audit.L().Error("server.error", "where", "resolveAssignmentProvider", "err", err.Error())
+		return &httpErr{500, "Interner Serverfehler"}
 	}
 	if kita == nil {
 		return &httpErr{400, "unknown kita_id"}
@@ -147,7 +151,7 @@ func (h *Handler) resolveAssignmentProvider(a *models.Assignment) *httpErr {
 
 func (h *Handler) DeleteAssignment(w http.ResponseWriter, r *http.Request) {
 	if err := store.DeleteAssignment(h.db, chi.URLParam(r, "id")); err != nil {
-		writeError(w, 500, err.Error())
+		serverError(w, err)
 		return
 	}
 	w.WriteHeader(204)
@@ -167,7 +171,7 @@ func (h *Handler) BulkDeleteAssignments(w http.ResponseWriter, r *http.Request) 
 	}
 	deleted, err := store.BulkDeleteAssignments(h.db, body.IDs)
 	if err != nil {
-		writeError(w, 500, err.Error())
+		serverError(w, err)
 		return
 	}
 	writeJSON(w, 200, map[string]int64{"deleted": deleted})

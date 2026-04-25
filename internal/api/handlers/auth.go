@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"errors"
 	"net/http"
 
 	"github.com/pak/kita-springer-manager/internal/store"
@@ -56,7 +57,11 @@ func (h *Handler) SetupAuth(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := store.SetAuthCredentials(h.db, body.Username, body.Password); err != nil {
-		writeError(w, 400, err.Error())
+		if errors.Is(err, store.ErrPasswordTooShort) {
+			writeError(w, 400, err.Error())
+			return
+		}
+		serverError(w, err)
 		return
 	}
 	writeJSON(w, 200, map[string]string{"status": "ok"})
@@ -126,7 +131,11 @@ func (h *Handler) ChangePassword(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err := store.SetAuthCredentials(h.db, body.Username, body.NewPassword); err != nil {
-		writeError(w, 400, err.Error())
+		if errors.Is(err, store.ErrPasswordTooShort) {
+			writeError(w, 400, err.Error())
+			return
+		}
+		serverError(w, err)
 		return
 	}
 	writeJSON(w, 200, map[string]string{"status": "ok"})

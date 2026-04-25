@@ -14,7 +14,7 @@ func (h *Handler) ListClosures(w http.ResponseWriter, r *http.Request) {
 	ctype := r.URL.Query().Get("type")
 	closures, err := store.ListClosures(h.db, from, to, ctype)
 	if err != nil {
-		writeError(w, 500, err.Error())
+		serverError(w, err)
 		return
 	}
 	if closures == nil {
@@ -34,7 +34,7 @@ func (h *Handler) CreateClosure(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err := store.CreateClosure(h.db, &c); err != nil {
-		writeError(w, 500, err.Error())
+		serverError(w, err)
 		return
 	}
 	writeJSON(w, 201, c)
@@ -43,7 +43,7 @@ func (h *Handler) CreateClosure(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) DeleteClosure(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
 	if err := store.DeleteClosure(h.db, id); err != nil {
-		writeError(w, 500, err.Error())
+		serverError(w, err)
 		return
 	}
 	w.WriteHeader(204)

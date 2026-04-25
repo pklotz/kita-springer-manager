@@ -2,12 +2,23 @@ package middleware
 
 import (
 	"net/http"
+	"regexp"
 	"strings"
 	"time"
 
 	chimw "github.com/go-chi/chi/v5/middleware"
 	"github.com/pak/kita-springer-manager/internal/audit"
 )
+
+// tokenRe masks the long random `token` parameter used for unauthenticated
+// calendar/PDF subscription URLs so it doesn't end up in plaintext audit
+// entries. Other query params remain visible — they're useful for debugging
+// (e.g. month/from/to filters).
+var tokenRe = regexp.MustCompile(`(?i)token=[^&]+`)
+
+func maskQuery(q string) string {
+	return tokenRe.ReplaceAllString(q, "token=***")
+}
 
 // AccessLog records every HTTP request as a structured audit event. Replaces
 // chi's default text logger so we get JSON lines compatible with the rest of
@@ -31,9 +42,10 @@ func AccessLog(next http.Handler) http.Handler {
 			attrs = append(attrs, "user", u)
 		}
 		// GET query-string aids debugging filter/range issues; POST/PUT bodies
-		// are deliberately NOT captured to avoid logging secrets/PII.
+		// are deliberately NOT captured to avoid logging secrets/PII. The
+		// download-token is masked — it's a credential, not a debug aid.
 		if q := r.URL.RawQuery; q != "" && r.Method == http.MethodGet {
-			attrs = append(attrs, "query", q)
+			attrs = append(attrs, "query", maskQuery(q))
 		}
 
 		if ww.Status() >= 400 {

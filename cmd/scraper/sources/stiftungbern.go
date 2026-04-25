@@ -328,14 +328,6 @@ func looksLikePersonName(s string) bool {
 	return len(words) >= 2 && len(words) <= 5
 }
 
-// deobfuscateEmail turns "info(a)kita-laenggasse.ch" into "info@kita-laenggasse.ch".
-func deobfuscateEmail(s string) string {
-	s = strings.TrimSpace(s)
-	s = strings.ReplaceAll(s, "(a)", "@")
-	s = strings.ReplaceAll(s, "[at]", "@")
-	return s
-}
-
 // absoluteURL resolves a possibly-relative src against a base URL.
 func absoluteURL(base, src string) string {
 	if strings.HasPrefix(src, "http") {

@@ -29,7 +29,7 @@ func (h *Handler) ExportWorktimePDF(w http.ResponseWriter, r *http.Request) {
 
 	all, err := store.ListAssignments(h.db, from, to)
 	if err != nil {
-		writeError(w, 500, err.Error())
+		serverError(w, err)
 		return
 	}
 
@@ -51,7 +51,7 @@ func (h *Handler) ExportWorktimePDF(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/pdf")
 	w.Header().Set("Content-Disposition", fmt.Sprintf(`attachment; filename="%s"`, filename))
 	if err := pdf.Generate(w, month, items); err != nil {
-		writeError(w, 500, err.Error())
+		serverError(w, err)
 		return
 	}
 }

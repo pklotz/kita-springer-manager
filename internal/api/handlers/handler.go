@@ -33,6 +33,25 @@ func writeError(w http.ResponseWriter, status int, msg string) {
 	writeJSON(w, status, map[string]string{"error": msg})
 }
 
+// serverError logs the underlying err to the audit trail and returns a
+// generic 500 to the client. The actual error string never leaves the
+// process — it can leak SQL schema, file paths, or library internals.
+func serverError(w http.ResponseWriter, err error) {
+	audit.L().Error("server.error", "err", err.Error())
+	writeError(w, 500, "Interner Serverfehler")
+}
+
+// upstreamError reports a failure of an external dependency (transit API,
+// geocoding) to the client with a generic 502 and a short German hint, while
+// the technical detail goes only to the audit log.
+func upstreamError(w http.ResponseWriter, err error, hint string) {
+	audit.L().Error("upstream.error", "hint", hint, "err", err.Error())
+	if hint == "" {
+		hint = "Externer Dienst nicht erreichbar"
+	}
+	writeError(w, 502, hint)
+}
+
 // decodeJSON decodes r.Body into v using a stricter decoder: unknown fields are
 // rejected (mass-assignment guard) and any trailing content after the first
 // JSON value is rejected too. The body has already been wrapped in

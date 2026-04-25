@@ -12,7 +12,7 @@ import (
 func (h *Handler) ListRecurring(w http.ResponseWriter, r *http.Request) {
 	list, err := store.ListRecurring(h.db)
 	if err != nil {
-		writeError(w, 500, err.Error())
+		serverError(w, err)
 		return
 	}
 	if list == nil {
@@ -33,12 +33,12 @@ func (h *Handler) CreateRecurring(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err := store.CreateRecurring(h.db, &rec); err != nil {
-		writeError(w, 500, err.Error())
+		serverError(w, err)
 		return
 	}
 	created, skipped, err := store.GenerateFromRecurring(h.db, &rec)
 	if err != nil {
-		writeError(w, 500, err.Error())
+		serverError(w, err)
 		return
 	}
 	writeJSON(w, 201, map[string]any{
@@ -50,7 +50,7 @@ func (h *Handler) CreateRecurring(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) DeleteRecurring(w http.ResponseWriter, r *http.Request) {
 	if err := store.DeleteRecurring(h.db, chi.URLParam(r, "id")); err != nil {
-		writeError(w, 500, err.Error())
+		serverError(w, err)
 		return
 	}
 	w.WriteHeader(204)

@@ -15,7 +15,7 @@ import (
 func (h *Handler) ListProviders(w http.ResponseWriter, r *http.Request) {
 	providers, err := store.ListProviders(h.db)
 	if err != nil {
-		writeError(w, 500, err.Error())
+		serverError(w, err)
 		return
 	}
 	if providers == nil {
@@ -38,7 +38,7 @@ func (h *Handler) CreateProvider(w http.ResponseWriter, r *http.Request) {
 		p.ColorHex = "#6366f1"
 	}
 	if err := store.CreateProvider(h.db, &p); err != nil {
-		writeError(w, 500, err.Error())
+		serverError(w, err)
 		return
 	}
 	writeJSON(w, 201, p)
@@ -48,7 +48,7 @@ func (h *Handler) UpdateProvider(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
 	existing, err := store.GetProvider(h.db, id)
 	if err != nil {
-		writeError(w, 500, err.Error())
+		serverError(w, err)
 		return
 	}
 	if existing == nil {
@@ -62,7 +62,7 @@ func (h *Handler) UpdateProvider(w http.ResponseWriter, r *http.Request) {
 	}
 	p.ID = id
 	if err := store.UpdateProvider(h.db, &p); err != nil {
-		writeError(w, 500, err.Error())
+		serverError(w, err)
 		return
 	}
 	writeJSON(w, 200, p)
@@ -70,7 +70,7 @@ func (h *Handler) UpdateProvider(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) DeleteProvider(w http.ResponseWriter, r *http.Request) {
 	if err := store.DeleteProvider(h.db, chi.URLParam(r, "id")); err != nil {
-		writeError(w, 500, err.Error())
+		serverError(w, err)
 		return
 	}
 	w.WriteHeader(204)
@@ -125,7 +125,7 @@ func (h *Handler) ImportExcel(w http.ResponseWriter, r *http.Request) {
 
 	settings, err := store.GetSettings(h.db)
 	if err != nil {
-		writeError(w, 500, err.Error())
+		serverError(w, err)
 		return
 	}
 	if settings == nil || settings.UserName == "" {

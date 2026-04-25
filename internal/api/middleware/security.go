@@ -16,16 +16,29 @@ func SecurityHeaders(next http.Handler) http.Handler {
 		h.Set("X-Frame-Options", "DENY")
 		h.Set("Referrer-Policy", "no-referrer")
 		h.Set("Permissions-Policy", "geolocation=(), camera=(), microphone=(), interest-cohort=()")
+		// CSP rationale:
+		//   - script-src 'self' (no inline, no eval)
+		//   - style-src 'unsafe-inline' is unavoidable: Vue's :style bindings
+		//     emit attribute styles. Tailwind itself ships as external CSS.
+		//   - img-src https: covers user-supplied photo_url; data: kept for
+		//     base64-encoded chart icons and tiny inline graphics.
+		//   - manifest-src 'self' for the PWA manifest.
+		//   - object-src 'none' blocks Flash/legacy plugin embeds outright.
+		//   - upgrade-insecure-requests forces any accidental http:// on
+		//     same-origin to https:// once we're behind TLS.
 		h.Set("Content-Security-Policy",
 			"default-src 'self'; "+
 				"img-src 'self' https: data:; "+
 				"style-src 'self' 'unsafe-inline'; "+
 				"script-src 'self'; "+
 				"connect-src 'self'; "+
-				"font-src 'self' data:; "+
+				"font-src 'self'; "+
+				"manifest-src 'self'; "+
+				"object-src 'none'; "+
 				"frame-ancestors 'none'; "+
 				"base-uri 'none'; "+
-				"form-action 'self'")
+				"form-action 'self'; "+
+				"upgrade-insecure-requests")
 		if isHTTPS(r) {
 			h.Set("Strict-Transport-Security", "max-age=31536000; includeSubDomains")
 		}

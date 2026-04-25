@@ -12,7 +12,7 @@ import (
 func (h *Handler) GetSettings(w http.ResponseWriter, r *http.Request) {
 	s, err := store.GetSettings(h.db)
 	if err != nil {
-		writeError(w, 500, err.Error())
+		serverError(w, err)
 		return
 	}
 	writeJSON(w, 200, s)
@@ -49,7 +49,7 @@ func (h *Handler) UpdateSettings(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := store.SaveSettings(h.db, &s); err != nil {
-		writeError(w, 500, err.Error())
+		serverError(w, err)
 		return
 	}
 

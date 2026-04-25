@@ -11,7 +11,7 @@ import (
 func (h *Handler) ListKitas(w http.ResponseWriter, r *http.Request) {
 	kitas, err := store.ListKitas(h.db)
 	if err != nil {
-		writeError(w, 500, err.Error())
+		serverError(w, err)
 		return
 	}
 	if kitas == nil {
@@ -23,7 +23,7 @@ func (h *Handler) ListKitas(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) GetKita(w http.ResponseWriter, r *http.Request) {
 	k, err := store.GetKita(h.db, chi.URLParam(r, "id"))
 	if err != nil {
-		writeError(w, 500, err.Error())
+		serverError(w, err)
 		return
 	}
 	if k == nil {
@@ -44,7 +44,7 @@ func (h *Handler) CreateKita(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err := store.CreateKita(h.db, &k); err != nil {
-		writeError(w, 500, err.Error())
+		serverError(w, err)
 		return
 	}
 	writeJSON(w, 201, k)
@@ -54,7 +54,7 @@ func (h *Handler) UpdateKita(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
 	existing, err := store.GetKita(h.db, id)
 	if err != nil {
-		writeError(w, 500, err.Error())
+		serverError(w, err)
 		return
 	}
 	if existing == nil {
@@ -68,7 +68,7 @@ func (h *Handler) UpdateKita(w http.ResponseWriter, r *http.Request) {
 	}
 	k.ID = id
 	if err := store.UpdateKita(h.db, &k); err != nil {
-		writeError(w, 500, err.Error())
+		serverError(w, err)
 		return
 	}
 	writeJSON(w, 200, k)
@@ -76,7 +76,7 @@ func (h *Handler) UpdateKita(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) DeleteKita(w http.ResponseWriter, r *http.Request) {
 	if err := store.DeleteKita(h.db, chi.URLParam(r, "id")); err != nil {
-		writeError(w, 500, err.Error())
+		serverError(w, err)
 		return
 	}
 	w.WriteHeader(204)
@@ -87,7 +87,7 @@ func (h *Handler) LookupStops(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
 	k, err := store.GetKita(h.db, id)
 	if err != nil {
-		writeError(w, 500, err.Error())
+		serverError(w, err)
 		return
 	}
 	if k == nil {
@@ -100,12 +100,12 @@ func (h *Handler) LookupStops(w http.ResponseWriter, r *http.Request) {
 	}
 	lat, lng, err := h.transit.Geocode(k.Address)
 	if err != nil {
-		writeError(w, 502, "Geocoding fehlgeschlagen: "+err.Error())
+		upstreamError(w, err, "Geocoding fehlgeschlagen")
 		return
 	}
 	result, err := h.transit.StopsNear(lat, lng)
 	if err != nil {
-		writeError(w, 502, "Haltestellen-Suche fehlgeschlagen: "+err.Error())
+		upstreamError(w, err, "Haltestellen-Suche fehlgeschlagen")
 		return
 	}
 	stops := []string{}
@@ -124,7 +124,7 @@ func (h *Handler) LookupStops(w http.ResponseWriter, r *http.Request) {
 	}
 	k.Stops = stops
 	if err := store.UpdateKita(h.db, k); err != nil {
-		writeError(w, 500, err.Error())
+		serverError(w, err)
 		return
 	}
 	writeJSON(w, 200, k)
