@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"encoding/json"
 	"log"
 	"net/http"
 	"strings"
@@ -21,7 +20,7 @@ func (h *Handler) GetSettings(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) UpdateSettings(w http.ResponseWriter, r *http.Request) {
 	var s models.Settings
-	if err := json.NewDecoder(r.Body).Decode(&s); err != nil {
+	if err := decodeJSON(r, &s); err != nil {
 		writeError(w, 400, "invalid request")
 		return
 	}

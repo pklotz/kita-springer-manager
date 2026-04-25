@@ -1,13 +1,18 @@
 <template>
   <div class="min-h-screen flex flex-col">
     <header class="bg-brand-500 text-white shadow-md">
-      <div class="max-w-2xl lg:max-w-4xl mx-auto px-4 py-3 flex items-center justify-between">
+      <div class="max-w-2xl lg:max-w-4xl mx-auto px-4 py-3 flex items-center justify-between gap-3">
         <span class="font-semibold text-lg">Kita Springer</span>
-        <nav class="flex gap-4 text-sm">
+        <nav class="flex gap-4 text-sm items-center">
           <RouterLink to="/" class="hover:text-blue-200 transition-colors" active-class="font-bold underline">Kalender</RouterLink>
           <RouterLink to="/worktime" class="hover:text-blue-200 transition-colors" active-class="font-bold underline">Arbeitszeit</RouterLink>
           <RouterLink to="/providers" class="hover:text-blue-200 transition-colors" active-class="font-bold underline">Kitas</RouterLink>
           <RouterLink to="/settings" class="hover:text-blue-200 transition-colors" active-class="font-bold underline">Einstellungen</RouterLink>
+          <button @click="logout"
+            title="Abmelden"
+            class="ml-1 inline-flex items-center justify-center w-7 h-7 rounded hover:bg-brand-600 transition-colors">
+            <LogOut class="w-4 h-4" />
+          </button>
         </nav>
       </div>
     </header>
@@ -22,5 +27,12 @@
 
 <script setup>
 import { RouterLink, RouterView } from 'vue-router'
+import { LogOut } from 'lucide-vue-next'
 import ToastContainer from './components/ToastContainer.vue'
+import { authApi } from './api'
+
+const logout = async () => {
+  if (!confirm('Wirklich abmelden?')) return
+  await authApi.logout()
+}
 </script>

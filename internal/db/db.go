@@ -133,6 +133,20 @@ var migrations = [][]string{
 	{
 		`DELETE FROM closures WHERE type='holiday'`,
 	},
+	// v10: HTTP Basic Auth credentials (single-user). Stored as keys in `settings`.
+	// The auth_password_hash is a bcrypt hash; an empty value means "not configured"
+	// and the server runs in setup mode (only /api/auth/setup is reachable).
+	{
+		`INSERT OR IGNORE INTO settings (key, value) VALUES ('auth_username', 'admin')`,
+		`INSERT OR IGNORE INTO settings (key, value) VALUES ('auth_password_hash', '')`,
+	},
+	// v11: download token for unauthenticated subscription URLs (calendar.ics,
+	// PDF export). Generated via SQLite's randomblob → 64 hex chars. Existing
+	// installations get a token on first migration; new installs get one when
+	// the password is first set in store.SetAuthCredentials.
+	{
+		`INSERT OR IGNORE INTO settings (key, value) VALUES ('auth_download_token', lower(hex(randomblob(32))))`,
+	},
 }
 
 func Open(path string) (*sql.DB, error) {

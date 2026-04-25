@@ -14,13 +14,18 @@ import (
 
 	frontendassets "github.com/pak/kita-springer-manager/frontend"
 	"github.com/pak/kita-springer-manager/internal/api"
+	"github.com/pak/kita-springer-manager/internal/audit"
 	"github.com/pak/kita-springer-manager/internal/db"
 	"github.com/pak/kita-springer-manager/internal/store"
 	"github.com/pak/kita-springer-manager/internal/transit"
 )
 
 func main() {
-	addr := flag.String("addr", envOr("ADDR", ":9092"), "HTTP listen address (env ADDR)")
+	// Default to localhost so a fresh install isn't immediately reachable from
+	// the network. Operators who terminate TLS in a reverse proxy on the same
+	// host should keep this; only override (e.g. ":9092") when binding to a
+	// specific interface is intentional.
+	addr := flag.String("addr", envOr("ADDR", "127.0.0.1:9092"), "HTTP listen address (env ADDR)")
 	dbPath := flag.String("db", envOr("DB_PATH", defaultDBPath()), "SQLite database file (env DB_PATH)")
 	flag.Parse()
 
@@ -28,6 +33,14 @@ func main() {
 	if err := os.MkdirAll(filepath.Dir(absDB), 0o755); err != nil {
 		log.Fatalf("create db dir: %v", err)
 	}
+
+	// Audit log goes next to the DB so a single backup of /data/ captures
+	// state and history together. Initialise before any other component so
+	// migrations/seed warnings end up in the file.
+	if err := audit.Init(absDB); err != nil {
+		log.Fatalf("init audit log: %v", err)
+	}
+	defer audit.Close() //nolint:errcheck
 	if _, err := os.Stat(absDB); os.IsNotExist(err) {
 		log.Printf("Datenbank nicht gefunden — neue Datenbank wird angelegt: %s", absDB)
 	} else {
@@ -39,6 +52,26 @@ func main() {
 		log.Fatalf("open db: %v", err)
 	}
 	defer database.Close()
+
+	// Optional bootstrap: KITA_INITIAL_PASSWORD seeds the first password if no
+	// hash is set yet. Useful for headless installs (Docker, systemd). Once
+	// configured, the variable is ignored — re-running with it set is a no-op.
+	if pw := os.Getenv("KITA_INITIAL_PASSWORD"); pw != "" {
+		configured, err := store.IsAuthConfigured(database)
+		if err != nil {
+			log.Fatalf("check auth: %v", err)
+		}
+		if !configured {
+			user := envOr("KITA_INITIAL_USERNAME", "admin")
+			if err := store.SetAuthCredentials(database, user, pw); err != nil {
+				log.Fatalf("seed initial password: %v", err)
+			}
+			log.Printf("Initial-Passwort für Benutzer %q gesetzt", user)
+		}
+	}
+	if configured, _ := store.IsAuthConfigured(database); !configured {
+		log.Printf("⚠ Auth ist NOCH NICHT konfiguriert — Setup über die Web-UI.")
+	}
 
 	settings, err := store.GetSettings(database)
 	if err != nil {
@@ -67,10 +100,13 @@ func main() {
 		Addr:              *addr,
 		Handler:           router,
 		ReadHeaderTimeout: 10 * time.Second,
+		ReadTimeout:       30 * time.Second,
+		WriteTimeout:      120 * time.Second, // PDF/iCal export can take a moment
+		IdleTimeout:       120 * time.Second,
 	}
 
 	go func() {
-		log.Printf("Server running on http://localhost%s", *addr)
+		log.Printf("Server running on http://%s", *addr)
 		if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			log.Fatalf("server: %v", err)
 		}

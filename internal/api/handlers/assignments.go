@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"encoding/json"
 	"fmt"
 	"net/http"
 
@@ -58,7 +57,7 @@ func (h *Handler) GetAssignment(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) CreateAssignment(w http.ResponseWriter, r *http.Request) {
 	var a models.Assignment
-	if err := json.NewDecoder(r.Body).Decode(&a); err != nil {
+	if err := decodeJSON(r, &a); err != nil {
 		writeError(w, 400, "invalid request")
 		return
 	}
@@ -96,7 +95,7 @@ func (h *Handler) UpdateAssignment(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var a models.Assignment
-	if err := json.NewDecoder(r.Body).Decode(&a); err != nil {
+	if err := decodeJSON(r, &a); err != nil {
 		writeError(w, 400, "invalid request")
 		return
 	}
@@ -158,7 +157,7 @@ func (h *Handler) BulkDeleteAssignments(w http.ResponseWriter, r *http.Request) 
 	var body struct {
 		IDs []string `json:"ids"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+	if err := decodeJSON(r, &body); err != nil {
 		writeError(w, 400, "invalid request")
 		return
 	}

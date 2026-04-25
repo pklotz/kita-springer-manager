@@ -22,10 +22,10 @@
         Nach Träger gruppieren
       </label>
 
-      <a v-if="filteredItems.length" :href="exportUrl" download
-        class="inline-flex items-center gap-1 text-sm bg-brand-500 text-white px-3 py-2 rounded-lg hover:bg-brand-600 transition-colors">
-        PDF
-      </a>
+      <button v-if="filteredItems.length" @click="downloadPDF" :disabled="downloading"
+        class="inline-flex items-center gap-1 text-sm bg-brand-500 text-white px-3 py-2 rounded-lg hover:bg-brand-600 disabled:opacity-60 transition-colors">
+        {{ downloading ? '…' : 'PDF' }}
+      </button>
     </div>
 
     <!-- Empty state -->
@@ -67,7 +67,7 @@ import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import dayjs from 'dayjs'
 import 'dayjs/locale/de'
-import { assignmentsApi, providersApi, kitasApi } from '../api'
+import { assignmentsApi, providersApi, kitasApi, downloadsApi } from '../api'
 import {
   netWorkMinutes, breakMinutes, grossWorkMinutes, requiredBreakMinutes,
 } from '../utils/time'
@@ -140,11 +140,16 @@ const filteredItems = computed(() => {
   return itemsOfMonth.value.filter(a => a.provider?.id === filterProvider.value)
 })
 
-const exportUrl = computed(() => {
-  const params = new URLSearchParams({ month: selectedMonth.value })
-  if (filterProvider.value) params.set('provider_id', filterProvider.value)
-  return `/api/worktime/export?${params.toString()}`
-})
+const downloading = ref(false)
+const downloadPDF = async () => {
+  if (downloading.value) return
+  downloading.value = true
+  try {
+    await downloadsApi.worktimePDF(selectedMonth.value, filterProvider.value || null)
+  } finally {
+    downloading.value = false
+  }
+}
 
 const groupedItems = computed(() => {
   const groups = new Map()

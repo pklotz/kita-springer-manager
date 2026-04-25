@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"encoding/json"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
@@ -36,7 +35,7 @@ func (h *Handler) GetKita(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) CreateKita(w http.ResponseWriter, r *http.Request) {
 	var k models.Kita
-	if err := json.NewDecoder(r.Body).Decode(&k); err != nil {
+	if err := decodeJSON(r, &k); err != nil {
 		writeError(w, 400, "invalid request")
 		return
 	}
@@ -63,7 +62,7 @@ func (h *Handler) UpdateKita(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var k models.Kita
-	if err := json.NewDecoder(r.Body).Decode(&k); err != nil {
+	if err := decodeJSON(r, &k); err != nil {
 		writeError(w, 400, "invalid request")
 		return
 	}

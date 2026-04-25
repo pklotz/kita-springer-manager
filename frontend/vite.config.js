@@ -8,8 +8,29 @@ export default defineConfig({
     VitePWA({
       registerType: 'autoUpdate',
       workbox: {
-        globPatterns: ['**/*.{js,css,html,ico,png,svg}'],
+        // Don't precache index.html — keep it network-first so backend changes
+        // (auth, new endpoints) propagate immediately. Precaching index.html
+        // makes the SW serve a stale shell for one+ load after every deploy.
+        globPatterns: ['**/*.{js,css,ico,png,svg}'],
+        navigateFallback: null,
+        skipWaiting: true,
+        clientsClaim: true,
+        // /api/* and the index navigation must always go to the network so
+        // basic-auth challenges and fresh data show up.
+        navigateFallbackDenylist: [/^\/api\//],
         runtimeCaching: [
+          {
+            urlPattern: ({ request }) => request.mode === 'navigate',
+            handler: 'NetworkFirst',
+            options: {
+              cacheName: 'pages',
+              networkTimeoutSeconds: 5,
+            },
+          },
+          {
+            urlPattern: ({ url }) => url.pathname.startsWith('/api/'),
+            handler: 'NetworkOnly',
+          },
           {
             urlPattern: /^https:\/\/transport\.opendata\.ch\/.*/i,
             handler: 'NetworkFirst',

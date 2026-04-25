@@ -51,16 +51,57 @@ make build              # bin/kita-springer
 
 Server-Flags bzw. Env-Variablen (Flag hat Vorrang):
 
-| Flag       | Env        | Default        | Zweck                          |
-|------------|------------|----------------|--------------------------------|
-| `--addr`   | `ADDR`     | `:9092`        | HTTP Listen-Adresse            |
-| `--db`     | `DB_PATH`  | `data/app.db`  | Pfad zur SQLite-Datenbank      |
+| Flag       | Env                       | Default              | Zweck                                            |
+|------------|---------------------------|----------------------|--------------------------------------------------|
+| `--addr`   | `ADDR`                    | `127.0.0.1:9092`     | HTTP Listen-Adresse (nur loopback ist Default)   |
+| `--db`     | `DB_PATH`                 | `data/app.db`        | Pfad zur SQLite-Datenbank                        |
+| –          | `KITA_INITIAL_USERNAME`   | `admin`              | Initial-Benutzer (nur beim ersten Start)         |
+| –          | `KITA_INITIAL_PASSWORD`   | –                    | Initial-Passwort (nur beim ersten Start)         |
 
-Beispiel:
+Beispiel (Headless-Bootstrap):
 
 ```bash
-ADDR=:8080 DB_PATH=/var/lib/kita/app.db ./bin/kita-springer
+KITA_INITIAL_PASSWORD='ein-langes-passwort' ADDR=127.0.0.1:9092 ./bin/kita-springer
 ```
+
+## Authentifizierung & Internet-Betrieb
+
+Die App nutzt **HTTP Basic Auth** (single-user). Das Passwort wird mit `bcrypt`
+gehasht und im `settings`-KV der SQLite-DB abgelegt.
+
+- **Erster Start:** Es ist noch kein Passwort gesetzt. Die UI zeigt automatisch
+  ein Setup-Formular. Alternativ: `KITA_INITIAL_PASSWORD` als Env-Variable
+  vorgeben (Headless-/Container-Setups).
+- **Folgestart:** Der Browser fragt nach Benutzer und Passwort (Basic-Auth-Dialog).
+- **Passwort ändern:** Über *Einstellungen → Passwort ändern* in der UI.
+
+### Pflicht: HTTPS-Reverse-Proxy
+
+Basic-Auth-Credentials gehen bei jeder Anfrage als Klartext-Header über die
+Leitung. Die App **muss** im Internet hinter einem TLS-terminierenden Reverse
+Proxy laufen (Caddy, nginx, Traefik, …). Der Default-Bind ist `127.0.0.1:9092`
+— der Proxy verbindet sich lokal.
+
+Beispiel `Caddyfile`:
+
+```
+kita.example.com {
+    reverse_proxy 127.0.0.1:9092
+}
+```
+
+Caddy holt automatisch ein Let's-Encrypt-Zertifikat. Setze `ADDR=:9092` nur,
+wenn du bewusst direkt ans Netz binden willst (dann eigenes TLS oder Tunnel
+notwendig).
+
+### iPhone-Zugriff
+
+- **Web-UI:** `https://kita.example.com` im Safari öffnen — der iOS-Basic-Auth-Dialog
+  taucht einmal auf, danach werden die Credentials gecached.
+- **Kalender-Abo (iOS Calendar):** `webcal://benutzer:passwort@kita.example.com/api/calendar.ics`
+  abonnieren. Apple Calendar akzeptiert Credentials in der URL.
+- **PDF-Export:** Wird aus der UI heraus heruntergeladen (Browser sendet
+  gecachte Credentials beim Klick auf den Download-Link automatisch mit).
 
 ## Scraper
 

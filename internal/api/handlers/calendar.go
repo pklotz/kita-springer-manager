@@ -44,11 +44,11 @@ func (h *Handler) GetCalendar(w http.ResponseWriter, r *http.Request) {
 
 		sb.WriteString("BEGIN:VEVENT\r\n")
 		fmt.Fprintf(&sb, "UID:%s@kita-springer\r\n", a.ID)
-		fmt.Fprintf(&sb, "SUMMARY:%s\r\n", a.Kita.Name)
+		writeICalProp(&sb, "SUMMARY", a.Kita.Name)
 		fmt.Fprintf(&sb, "%s\r\n", dtstart)
 		fmt.Fprintf(&sb, "%s\r\n", dtend)
 		if a.Kita.Address != "" {
-			fmt.Fprintf(&sb, "LOCATION:%s\r\n", a.Kita.Address)
+			writeICalProp(&sb, "LOCATION", a.Kita.Address)
 		}
 		var descParts []string
 		if a.GroupName != "" {
@@ -58,7 +58,7 @@ func (h *Handler) GetCalendar(w http.ResponseWriter, r *http.Request) {
 			descParts = append(descParts, a.Notes)
 		}
 		if len(descParts) > 0 {
-			fmt.Fprintf(&sb, "DESCRIPTION:%s\r\n", strings.Join(descParts, `\n`))
+			writeICalProp(&sb, "DESCRIPTION", strings.Join(descParts, "\n"))
 		}
 		fmt.Fprintf(&sb, "DTSTAMP:%s\r\n", dtstamp)
 		sb.WriteString("END:VEVENT\r\n")
@@ -75,4 +75,45 @@ func icalDT(prop, date, t string) string {
 	dateStr := strings.ReplaceAll(date, "-", "")
 	timeStr := strings.ReplaceAll(t, ":", "") + "00"
 	return prop + ";TZID=Europe/Zurich:" + dateStr + "T" + timeStr
+}
+
+// writeICalProp writes a property line with RFC 5545-compliant escaping and
+// 75-octet line folding. Without this, user-supplied notes/addresses
+// containing commas, semicolons, backslashes, or newlines could break the
+// stream or inject extra calendar properties.
+func writeICalProp(sb *strings.Builder, name, value string) {
+	line := name + ":" + icalEscape(value)
+	foldICalLine(sb, line)
+}
+
+// icalEscape escapes the four characters that have meaning in iCal TEXT
+// values, per RFC 5545 §3.3.11. Order matters: backslash must come first.
+func icalEscape(s string) string {
+	s = strings.ReplaceAll(s, `\`, `\\`)
+	s = strings.ReplaceAll(s, "\r\n", `\n`)
+	s = strings.ReplaceAll(s, "\r", `\n`)
+	s = strings.ReplaceAll(s, "\n", `\n`)
+	s = strings.ReplaceAll(s, ";", `\;`)
+	s = strings.ReplaceAll(s, ",", `\,`)
+	return s
+}
+
+// foldICalLine writes a content line, folded at 75 octets per RFC 5545 §3.1.
+// Continuation lines start with a single space.
+func foldICalLine(sb *strings.Builder, line string) {
+	const maxOctets = 75
+	b := []byte(line)
+	for len(b) > maxOctets {
+		// Don't split inside a UTF-8 sequence: walk back to the previous
+		// rune boundary if maxOctets lands mid-codepoint.
+		split := maxOctets
+		for split > 0 && b[split]&0xC0 == 0x80 {
+			split--
+		}
+		sb.Write(b[:split])
+		sb.WriteString("\r\n ")
+		b = b[split:]
+	}
+	sb.Write(b)
+	sb.WriteString("\r\n")
 }

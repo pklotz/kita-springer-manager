@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"encoding/json"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
@@ -25,7 +24,7 @@ func (h *Handler) ListRecurring(w http.ResponseWriter, r *http.Request) {
 // CreateRecurring creates a recurring rule and generates its assignment records.
 func (h *Handler) CreateRecurring(w http.ResponseWriter, r *http.Request) {
 	var rec models.RecurringAssignment
-	if err := json.NewDecoder(r.Body).Decode(&rec); err != nil {
+	if err := decodeJSON(r, &rec); err != nil {
 		writeError(w, 400, "invalid request")
 		return
 	}

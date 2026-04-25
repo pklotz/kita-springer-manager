@@ -70,7 +70,7 @@
     </div>
 
     <AssignmentForm v-if="editAssignment" :assignment="editAssignment"
-      @close="editAssignment = null" @saved="onSaved" />
+      @close="editAssignment = null" @saved="onSaved" @deleted="onSaved" />
   </div>
 </template>
 

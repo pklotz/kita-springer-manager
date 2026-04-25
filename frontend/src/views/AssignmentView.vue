@@ -96,7 +96,7 @@
     </div>
 
     <AssignmentForm v-if="showEditForm" :assignment="assignment"
-      @close="showEditForm = false" @saved="onSaved" />
+      @close="showEditForm = false" @saved="onSaved" @deleted="onDeleted" />
   </div>
 
   <div v-else class="text-center text-gray-400 py-16">Wird geladen…</div>
@@ -186,6 +186,13 @@ const loadAssignment = async () => {
 const onSaved = async () => {
   showEditForm.value = false
   await loadAssignment()
+}
+
+const onDeleted = () => {
+  showEditForm.value = false
+  // Don't refetch — the assignment is gone. Pop back to wherever the user
+  // came from (calendar or history).
+  router.back()
 }
 
 onMounted(async () => {

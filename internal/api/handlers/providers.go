@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"encoding/json"
 	"net/http"
 	"strconv"
 	"time"
@@ -27,7 +26,7 @@ func (h *Handler) ListProviders(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) CreateProvider(w http.ResponseWriter, r *http.Request) {
 	var p models.Provider
-	if err := json.NewDecoder(r.Body).Decode(&p); err != nil {
+	if err := decodeJSON(r, &p); err != nil {
 		writeError(w, 400, "invalid request")
 		return
 	}
@@ -57,7 +56,7 @@ func (h *Handler) UpdateProvider(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var p models.Provider
-	if err := json.NewDecoder(r.Body).Decode(&p); err != nil {
+	if err := decodeJSON(r, &p); err != nil {
 		writeError(w, 400, "invalid request")
 		return
 	}

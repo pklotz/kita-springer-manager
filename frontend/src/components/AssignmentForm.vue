@@ -113,7 +113,7 @@ import {
 } from '../utils/time'
 
 const props = defineProps({ assignment: { type: Object, default: null } })
-const emit = defineEmits(['close', 'saved'])
+const emit = defineEmits(['close', 'saved', 'deleted'])
 
 const kitas = ref([])
 const providers = ref([])
@@ -248,7 +248,9 @@ const save = async () => {
 const remove = async () => {
   if (confirm('Einsatz wirklich löschen?')) {
     await assignmentsApi.delete(props.assignment.id)
-    emit('saved')
+    // Distinct from 'saved' so the parent doesn't refetch an entity that no
+    // longer exists — that 404 used to bubble up as a misleading toast.
+    emit('deleted')
   }
 }
 

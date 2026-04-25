@@ -29,12 +29,12 @@
     <div class="flex gap-3 mb-3">
       <div class="flex-1">
         <label class="block text-sm text-gray-600 mb-1">Von *</label>
-        <input type="date" v-model="form.date_from"
+        <input type="date" v-model="form.date_from" @change="onFromChange"
           class="w-full rounded-lg border border-gray-200 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand-500" />
       </div>
       <div class="flex-1">
         <label class="block text-sm text-gray-600 mb-1">Bis (inkl.)</label>
-        <input type="date" v-model="form.date_to"
+        <input type="date" v-model="form.date_to" @change="toTouched = true"
           class="w-full rounded-lg border border-gray-200 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand-500" />
       </div>
     </div>
@@ -71,6 +71,17 @@ const form = ref({
   date_to: '',
   note: '',
 })
+
+// Tracks whether the user has manually edited "Bis". As long as it's false we
+// keep "Bis" in sync with "Von" — typical 1-day-absence case completes with a
+// single keystroke. Once the user touches "Bis" we stop overriding.
+const toTouched = ref(false)
+
+const onFromChange = () => {
+  if (!toTouched.value || !form.value.date_to || form.value.date_to < form.value.date_from) {
+    form.value.date_to = form.value.date_from
+  }
+}
 
 const canSave = computed(() => {
   if (!form.value.date_from) return false

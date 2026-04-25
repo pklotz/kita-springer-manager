@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"encoding/json"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
@@ -26,7 +25,7 @@ func (h *Handler) ListClosures(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) CreateClosure(w http.ResponseWriter, r *http.Request) {
 	var c models.Closure
-	if err := json.NewDecoder(r.Body).Decode(&c); err != nil {
+	if err := decodeJSON(r, &c); err != nil {
 		writeError(w, 400, "invalid JSON")
 		return
 	}

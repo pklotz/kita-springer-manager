@@ -38,7 +38,7 @@
 
     <VacationList :vacations="upcomingVacations" @remove="removeClosure" />
 
-    <AssignmentForm v-if="showForm" :assignment="editAssignment" @close="showForm = false" @saved="onSaved" />
+    <AssignmentForm v-if="showForm" :assignment="editAssignment" @close="showForm = false" @saved="onSaved" @deleted="onSaved" />
     <ClosureForm v-if="showClosureForm" @close="showClosureForm = false" @saved="onClosureSaved" />
     <RecurringForm v-if="showRecurringForm" @close="showRecurringForm = false" @saved="load" />
   </div>
