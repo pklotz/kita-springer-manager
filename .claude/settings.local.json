@@ -27,7 +27,22 @@
       "Bash(unzip -o /Users/pak/Downloads/Mai_2026.xlsx -d mai_xlsx)",
       "Bash(sqlite3 *)",
       "Bash(git add *)",
-      "Bash(git commit -m ' *)"
+      "Bash(git commit -m ' *)",
+      "Bash(git *)",
+      "Bash(go test *)",
+      "WebFetch(domain:github.com)",
+      "Bash(curl -sSL https://raw.githubusercontent.com/rickar/cal/master/v2/ch/ch_holidays.go)",
+      "Bash(curl -sSL \"https://pkg.go.dev/github.com/rickar/cal/v2#Holiday\")",
+      "Bash(curl -s http://localhost:9092/api/calendar.ics)",
+      "Bash(pdfinfo /Users/pak/Projects/kita-springer-manager/Arbeitszeiterfassung_KitasBern_Feb2026.pdf)",
+      "Bash(curl -sSL -o /tmp/worktime_test.pdf -w \"HTTP %{http_code}\\\\nContent-Type: %{content_type}\\\\nSize: %{size_download}\\\\n\" \"http://localhost:9092/api/worktime/export?month=2026-02\")",
+      "Bash(kill %1)",
+      "Bash(wait)",
+      "Bash(curl -sSL -o /tmp/wt_apr.pdf -w \"HTTP %{http_code}  Size: %{size_download}\\\\n\" \"http://localhost:9092/api/worktime/export?month=2026-04\")",
+      "Bash(curl -sSL -i \"http://localhost:9092/api/worktime/export?month=2026-04&provider_id=beee0670-6b69-464f-aa72-94670fb966fc\")",
+      "Bash(curl *)",
+      "Bash(make build *)",
+      "Bash(pkill -f \"kita-springer.*--db=/tmp\")"
     ]
   }
 }
