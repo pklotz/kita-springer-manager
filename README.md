@@ -95,6 +95,13 @@ docker run -d --name kita-springer \
 - Hinter einem TLS-Reverse-Proxy betreiben (Basic-Auth-Credentials sind im
   Klartext) — Cloud-Plattformen wie Cloud Run / Fly.io übernehmen TLS automatisch.
 
+Für Pushes nach ghcr.io gibt's ein Multi-Arch-Wrapper-Script (baut amd64+arm64
+und pusht in einem Schritt mit `:latest` und `:<git-sha>`-Tag):
+
+```bash
+./scripts/docker-push.sh
+```
+
 ### Konfiguration
 
 Server-Flags bzw. Env-Variablen (Flag hat Vorrang):
