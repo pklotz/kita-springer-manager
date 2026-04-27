@@ -47,11 +47,12 @@ func main() {
 		log.Printf("Datenbank: %s", absDB)
 	}
 
-	database, err := db.Open(absDB)
+	holder, err := db.NewHolder(absDB)
 	if err != nil {
 		log.Fatalf("open db: %v", err)
 	}
-	defer database.Close()
+	defer holder.Close()
+	database := holder.DB()
 
 	// Optional bootstrap: KITA_INITIAL_PASSWORD seeds the first password if no
 	// hash is set yet. Useful for headless installs (Docker, systemd). Once
@@ -94,7 +95,7 @@ func main() {
 		log.Printf("cleaned %d cached connections for past assignments", n)
 	}
 
-	router := api.NewRouter(database, transit.NewClient(), frontendassets.DistFS())
+	router := api.NewRouter(holder, transit.NewClient(), frontendassets.DistFS())
 
 	srv := &http.Server{
 		Addr:              *addr,

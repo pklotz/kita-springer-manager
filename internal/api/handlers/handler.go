@@ -6,16 +6,29 @@ import (
 	"net/http"
 
 	"github.com/pak/kita-springer-manager/internal/audit"
+	"github.com/pak/kita-springer-manager/internal/db"
 	"github.com/pak/kita-springer-manager/internal/transit"
 )
 
 type Handler struct {
-	db      *sql.DB
+	holder  *db.Holder
 	transit *transit.Client
 }
 
-func New(db *sql.DB, tc *transit.Client) *Handler {
-	return &Handler{db: db, transit: tc}
+func New(holder *db.Holder, tc *transit.Client) *Handler {
+	return &Handler{holder: holder, transit: tc}
+}
+
+// db returns the live SQL connection. Indirected through the holder so the
+// pool can be swapped (e.g. after a backup restore) without restarting.
+func (h *Handler) db() *sql.DB {
+	return h.holder.DB()
+}
+
+// holderRef exposes the holder for endpoints (backup/restore) that need to
+// swap the pool. Other handlers should stay on h.db().
+func (h *Handler) holderRef() *db.Holder {
+	return h.holder
 }
 
 func writeJSON(w http.ResponseWriter, status int, v any) {

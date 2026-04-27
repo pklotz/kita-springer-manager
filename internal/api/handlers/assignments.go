@@ -32,7 +32,7 @@ func conflictMessage(reason store.ConflictReason, other *models.Assignment) stri
 func (h *Handler) ListAssignments(w http.ResponseWriter, r *http.Request) {
 	from := r.URL.Query().Get("from")
 	to := r.URL.Query().Get("to")
-	assignments, err := store.ListAssignments(h.db, from, to)
+	assignments, err := store.ListAssignments(h.db(), from, to)
 	if err != nil {
 		serverError(w, err)
 		return
@@ -44,7 +44,7 @@ func (h *Handler) ListAssignments(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) GetAssignment(w http.ResponseWriter, r *http.Request) {
-	a, err := store.GetAssignment(h.db, chi.URLParam(r, "id"))
+	a, err := store.GetAssignment(h.db(), chi.URLParam(r, "id"))
 	if err != nil {
 		serverError(w, err)
 		return
@@ -70,14 +70,14 @@ func (h *Handler) CreateAssignment(w http.ResponseWriter, r *http.Request) {
 		writeError(w, err.status, err.msg)
 		return
 	}
-	if conflict, reason, err := store.FindAssignmentConflict(h.db, &a, ""); err != nil {
+	if conflict, reason, err := store.FindAssignmentConflict(h.db(), &a, ""); err != nil {
 		serverError(w, err)
 		return
 	} else if conflict != nil {
 		writeError(w, 409, conflictMessage(reason, conflict))
 		return
 	}
-	if err := store.CreateAssignment(h.db, &a); err != nil {
+	if err := store.CreateAssignment(h.db(), &a); err != nil {
 		serverError(w, err)
 		return
 	}
@@ -86,7 +86,7 @@ func (h *Handler) CreateAssignment(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) UpdateAssignment(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
-	existing, err := store.GetAssignment(h.db, id)
+	existing, err := store.GetAssignment(h.db(), id)
 	if err != nil {
 		serverError(w, err)
 		return
@@ -109,14 +109,14 @@ func (h *Handler) UpdateAssignment(w http.ResponseWriter, r *http.Request) {
 		writeError(w, err.status, err.msg)
 		return
 	}
-	if conflict, reason, err := store.FindAssignmentConflict(h.db, &a, id); err != nil {
+	if conflict, reason, err := store.FindAssignmentConflict(h.db(), &a, id); err != nil {
 		serverError(w, err)
 		return
 	} else if conflict != nil {
 		writeError(w, 409, conflictMessage(reason, conflict))
 		return
 	}
-	if err := store.UpdateAssignment(h.db, &a); err != nil {
+	if err := store.UpdateAssignment(h.db(), &a); err != nil {
 		serverError(w, err)
 		return
 	}
@@ -132,7 +132,7 @@ type httpErr struct {
 // a.ProviderID with the kita's provider. Any client-supplied provider_id
 // is discarded — the server is authoritative.
 func (h *Handler) resolveAssignmentProvider(a *models.Assignment) *httpErr {
-	kita, err := store.GetKita(h.db, a.KitaID)
+	kita, err := store.GetKita(h.db(), a.KitaID)
 	if err != nil {
 		// Log the underlying DB error for diagnostics, but surface a generic
 		// message to the client.
@@ -150,7 +150,7 @@ func (h *Handler) resolveAssignmentProvider(a *models.Assignment) *httpErr {
 }
 
 func (h *Handler) DeleteAssignment(w http.ResponseWriter, r *http.Request) {
-	if err := store.DeleteAssignment(h.db, chi.URLParam(r, "id")); err != nil {
+	if err := store.DeleteAssignment(h.db(), chi.URLParam(r, "id")); err != nil {
 		serverError(w, err)
 		return
 	}
@@ -169,7 +169,7 @@ func (h *Handler) BulkDeleteAssignments(w http.ResponseWriter, r *http.Request) 
 		writeError(w, 400, "ids required")
 		return
 	}
-	deleted, err := store.BulkDeleteAssignments(h.db, body.IDs)
+	deleted, err := store.BulkDeleteAssignments(h.db(), body.IDs)
 	if err != nil {
 		serverError(w, err)
 		return

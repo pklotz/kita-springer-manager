@@ -9,7 +9,7 @@ import (
 )
 
 func (h *Handler) ListKitas(w http.ResponseWriter, r *http.Request) {
-	kitas, err := store.ListKitas(h.db)
+	kitas, err := store.ListKitas(h.db())
 	if err != nil {
 		serverError(w, err)
 		return
@@ -21,7 +21,7 @@ func (h *Handler) ListKitas(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) GetKita(w http.ResponseWriter, r *http.Request) {
-	k, err := store.GetKita(h.db, chi.URLParam(r, "id"))
+	k, err := store.GetKita(h.db(), chi.URLParam(r, "id"))
 	if err != nil {
 		serverError(w, err)
 		return
@@ -43,7 +43,7 @@ func (h *Handler) CreateKita(w http.ResponseWriter, r *http.Request) {
 		writeError(w, 400, err.Error())
 		return
 	}
-	if err := store.CreateKita(h.db, &k); err != nil {
+	if err := store.CreateKita(h.db(), &k); err != nil {
 		serverError(w, err)
 		return
 	}
@@ -52,7 +52,7 @@ func (h *Handler) CreateKita(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) UpdateKita(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
-	existing, err := store.GetKita(h.db, id)
+	existing, err := store.GetKita(h.db(), id)
 	if err != nil {
 		serverError(w, err)
 		return
@@ -71,7 +71,7 @@ func (h *Handler) UpdateKita(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	k.ID = id
-	if err := store.UpdateKita(h.db, &k); err != nil {
+	if err := store.UpdateKita(h.db(), &k); err != nil {
 		serverError(w, err)
 		return
 	}
@@ -79,7 +79,7 @@ func (h *Handler) UpdateKita(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) DeleteKita(w http.ResponseWriter, r *http.Request) {
-	if err := store.DeleteKita(h.db, chi.URLParam(r, "id")); err != nil {
+	if err := store.DeleteKita(h.db(), chi.URLParam(r, "id")); err != nil {
 		serverError(w, err)
 		return
 	}
@@ -89,7 +89,7 @@ func (h *Handler) DeleteKita(w http.ResponseWriter, r *http.Request) {
 // LookupStops geocodes the Kita address and stores up to 2 nearest transit stops.
 func (h *Handler) LookupStops(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
-	k, err := store.GetKita(h.db, id)
+	k, err := store.GetKita(h.db(), id)
 	if err != nil {
 		serverError(w, err)
 		return
@@ -127,7 +127,7 @@ func (h *Handler) LookupStops(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	k.Stops = stops
-	if err := store.UpdateKita(h.db, k); err != nil {
+	if err := store.UpdateKita(h.db(), k); err != nil {
 		serverError(w, err)
 		return
 	}

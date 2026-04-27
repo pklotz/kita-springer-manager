@@ -10,7 +10,7 @@ import (
 
 // ListRecurring returns all recurring assignment rules.
 func (h *Handler) ListRecurring(w http.ResponseWriter, r *http.Request) {
-	list, err := store.ListRecurring(h.db)
+	list, err := store.ListRecurring(h.db())
 	if err != nil {
 		serverError(w, err)
 		return
@@ -32,11 +32,11 @@ func (h *Handler) CreateRecurring(w http.ResponseWriter, r *http.Request) {
 		writeError(w, 400, err.Error())
 		return
 	}
-	if err := store.CreateRecurring(h.db, &rec); err != nil {
+	if err := store.CreateRecurring(h.db(), &rec); err != nil {
 		serverError(w, err)
 		return
 	}
-	created, skipped, err := store.GenerateFromRecurring(h.db, &rec)
+	created, skipped, err := store.GenerateFromRecurring(h.db(), &rec)
 	if err != nil {
 		serverError(w, err)
 		return
@@ -49,7 +49,7 @@ func (h *Handler) CreateRecurring(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) DeleteRecurring(w http.ResponseWriter, r *http.Request) {
-	if err := store.DeleteRecurring(h.db, chi.URLParam(r, "id")); err != nil {
+	if err := store.DeleteRecurring(h.db(), chi.URLParam(r, "id")); err != nil {
 		serverError(w, err)
 		return
 	}

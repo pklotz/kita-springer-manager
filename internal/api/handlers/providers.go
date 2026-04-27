@@ -13,7 +13,7 @@ import (
 )
 
 func (h *Handler) ListProviders(w http.ResponseWriter, r *http.Request) {
-	providers, err := store.ListProviders(h.db)
+	providers, err := store.ListProviders(h.db())
 	if err != nil {
 		serverError(w, err)
 		return
@@ -37,7 +37,7 @@ func (h *Handler) CreateProvider(w http.ResponseWriter, r *http.Request) {
 		writeError(w, 400, err.Error())
 		return
 	}
-	if err := store.CreateProvider(h.db, &p); err != nil {
+	if err := store.CreateProvider(h.db(), &p); err != nil {
 		serverError(w, err)
 		return
 	}
@@ -46,7 +46,7 @@ func (h *Handler) CreateProvider(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) UpdateProvider(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
-	existing, err := store.GetProvider(h.db, id)
+	existing, err := store.GetProvider(h.db(), id)
 	if err != nil {
 		serverError(w, err)
 		return
@@ -65,7 +65,7 @@ func (h *Handler) UpdateProvider(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	p.ID = id
-	if err := store.UpdateProvider(h.db, &p); err != nil {
+	if err := store.UpdateProvider(h.db(), &p); err != nil {
 		serverError(w, err)
 		return
 	}
@@ -73,7 +73,7 @@ func (h *Handler) UpdateProvider(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) DeleteProvider(w http.ResponseWriter, r *http.Request) {
-	if err := store.DeleteProvider(h.db, chi.URLParam(r, "id")); err != nil {
+	if err := store.DeleteProvider(h.db(), chi.URLParam(r, "id")); err != nil {
 		serverError(w, err)
 		return
 	}
@@ -83,7 +83,7 @@ func (h *Handler) DeleteProvider(w http.ResponseWriter, r *http.Request) {
 // SeedKitas loads the built-in Kita list for a provider (e.g. "stadt_bern" or "stiftung_bern").
 func (h *Handler) SeedKitas(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
-	provider, err := store.GetProvider(h.db, id)
+	provider, err := store.GetProvider(h.db(), id)
 	if err != nil || provider == nil {
 		writeError(w, 404, "provider not found")
 		return
@@ -99,7 +99,7 @@ func (h *Handler) SeedKitas(w http.ResponseWriter, r *http.Request) {
 	count := 0
 	for _, k := range kitas {
 		k.ProviderID = provider.ID
-		if err := store.CreateKita(h.db, &k); err != nil {
+		if err := store.CreateKita(h.db(), &k); err != nil {
 			continue
 		}
 		count++
@@ -110,7 +110,7 @@ func (h *Handler) SeedKitas(w http.ResponseWriter, r *http.Request) {
 // ImportExcel handles Excel file upload and imports assignments for the provider.
 func (h *Handler) ImportExcel(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
-	provider, err := store.GetProvider(h.db, id)
+	provider, err := store.GetProvider(h.db(), id)
 	if err != nil || provider == nil {
 		writeError(w, 404, "provider not found")
 		return
@@ -127,7 +127,7 @@ func (h *Handler) ImportExcel(w http.ResponseWriter, r *http.Request) {
 	}
 	defer file.Close()
 
-	settings, err := store.GetSettings(h.db)
+	settings, err := store.GetSettings(h.db())
 	if err != nil {
 		serverError(w, err)
 		return
@@ -150,7 +150,7 @@ func (h *Handler) ImportExcel(w http.ResponseWriter, r *http.Request) {
 	}
 	opts.KitaIDOverride = r.FormValue("kita_id")
 
-	result, err := importer.ImportExcel(h.db, file, provider, opts)
+	result, err := importer.ImportExcel(h.db(), file, provider, opts)
 	if err != nil {
 		writeError(w, 422, err.Error())
 		return

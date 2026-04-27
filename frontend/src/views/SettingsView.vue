@@ -98,13 +98,92 @@
         {{ pw.busy ? 'Aktualisiere…' : 'Passwort aktualisieren' }}
       </button>
     </div>
+
+    <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-4 mt-6">
+      <h3 class="font-semibold text-gray-700 mb-3">Datenbank-Backup</h3>
+      <p class="text-sm text-gray-500 mb-3">
+        Komplettes Backup der Datenbank als einzelne Datei — nützlich für Umzug auf einen
+        anderen Rechner oder als Sicherung vor größeren Änderungen.
+      </p>
+
+      <button @click="exportBackup" :disabled="backup.exporting"
+        class="w-full py-2.5 bg-brand-500 text-white rounded-xl font-medium hover:bg-brand-600 disabled:opacity-60 transition-colors mb-4">
+        {{ backup.exporting ? 'Exportiere…' : 'Backup herunterladen' }}
+      </button>
+
+      <div class="border-t border-gray-100 pt-4">
+        <h4 class="font-medium text-gray-700 mb-2">Backup einspielen</h4>
+        <p class="text-sm text-gray-500 mb-3">
+          <strong class="text-red-600">Achtung:</strong> ersetzt die aktuelle Datenbank vollständig.
+          Aktuelle Daten gehen verloren. Nach dem Einspielen muss ein neues Passwort gesetzt werden.
+        </p>
+
+        <input type="file" accept=".db,application/octet-stream"
+          @change="onBackupFile" ref="fileInput"
+          class="block w-full text-sm text-gray-600 mb-3
+                 file:mr-3 file:py-2 file:px-3 file:rounded-lg file:border-0
+                 file:bg-gray-100 file:text-gray-700 hover:file:bg-gray-200" />
+
+        <p v-if="backup.error" class="text-sm text-red-600 mb-3">{{ backup.error }}</p>
+
+        <button @click="importBackup" :disabled="!backup.file || backup.importing"
+          class="w-full py-2.5 bg-red-600 text-white rounded-xl font-medium hover:bg-red-700 disabled:opacity-60 transition-colors">
+          {{ backup.importing ? 'Spiele ein…' : 'Backup einspielen und Datenbank ersetzen' }}
+        </button>
+      </div>
+    </div>
   </div>
 </template>
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
-import { settingsApi, authApi, downloadsApi } from '../api'
+import { settingsApi, authApi, downloadsApi, backupApi } from '../api'
 import StopSearch from '../components/StopSearch.vue'
+
+const backup = ref({
+  exporting: false,
+  importing: false,
+  file: null,
+  error: '',
+})
+const fileInput = ref(null)
+
+const exportBackup = async () => {
+  backup.value.exporting = true
+  backup.value.error = ''
+  try {
+    await backupApi.download()
+  } catch (e) {
+    backup.value.error = e.response?.data?.error || 'Export fehlgeschlagen'
+  } finally {
+    backup.value.exporting = false
+  }
+}
+
+const onBackupFile = (e) => {
+  backup.value.error = ''
+  backup.value.file = e.target.files?.[0] || null
+}
+
+const importBackup = async () => {
+  if (!backup.value.file) return
+  const ok = confirm(
+    `Datenbank wirklich durch "${backup.value.file.name}" ersetzen?\n\n` +
+    'Alle aktuellen Daten gehen verloren und das Passwort muss neu gesetzt werden.'
+  )
+  if (!ok) return
+  backup.value.importing = true
+  backup.value.error = ''
+  try {
+    await backupApi.restore(backup.value.file)
+    // Server has wiped the password — our cached token is now invalid. Force a
+    // logout + reload so the user lands on the setup screen.
+    await authApi.logout()
+  } catch (e) {
+    backup.value.error = e.response?.data?.error || 'Import fehlgeschlagen'
+    backup.value.importing = false
+  }
+}
 
 const pw = ref({
   old: '', new: '', confirm: '',

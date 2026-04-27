@@ -3,10 +3,10 @@
 package middleware
 
 import (
-	"database/sql"
 	"net/http"
 	"strings"
 
+	"github.com/pak/kita-springer-manager/internal/db"
 	"github.com/pak/kita-springer-manager/internal/store"
 )
 
@@ -38,7 +38,7 @@ var publicAPIPaths = map[string]bool{
 // SPA renders its own login dialog. External clients (iOS Calendar) embed
 // credentials in the URL or use the download token, so they don't need a
 // challenge either.
-func BasicAuth(db *sql.DB) func(http.Handler) http.Handler {
+func BasicAuth(holder *db.Holder) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			path := r.URL.Path
@@ -55,7 +55,10 @@ func BasicAuth(db *sql.DB) func(http.Handler) http.Handler {
 				return
 			}
 
-			configured, err := store.IsAuthConfigured(db)
+			// Resolve the live DB once per request; Restore may swap it.
+			conn := holder.DB()
+
+			configured, err := store.IsAuthConfigured(conn)
 			if err != nil {
 				http.Error(w, "Server-Fehler", http.StatusInternalServerError)
 				return
@@ -68,14 +71,14 @@ func BasicAuth(db *sql.DB) func(http.Handler) http.Handler {
 
 			// Download-token bypass for subscription URLs (Apple Calendar etc.).
 			if r.Method == http.MethodGet && downloadTokenPaths[path] {
-				if tok := r.URL.Query().Get("token"); tok != "" && store.VerifyDownloadToken(db, tok) {
+				if tok := r.URL.Query().Get("token"); tok != "" && store.VerifyDownloadToken(conn, tok) {
 					next.ServeHTTP(w, r)
 					return
 				}
 			}
 
 			user, pass, ok := r.BasicAuth()
-			if !ok || !store.VerifyAuth(db, user, pass) {
+			if !ok || !store.VerifyAuth(conn, user, pass) {
 				http.Error(w, "Unauthorized", http.StatusUnauthorized)
 				return
 			}

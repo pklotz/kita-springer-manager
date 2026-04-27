@@ -12,7 +12,7 @@ func (h *Handler) ListClosures(w http.ResponseWriter, r *http.Request) {
 	from := r.URL.Query().Get("from")
 	to := r.URL.Query().Get("to")
 	ctype := r.URL.Query().Get("type")
-	closures, err := store.ListClosures(h.db, from, to, ctype)
+	closures, err := store.ListClosures(h.db(), from, to, ctype)
 	if err != nil {
 		serverError(w, err)
 		return
@@ -33,7 +33,7 @@ func (h *Handler) CreateClosure(w http.ResponseWriter, r *http.Request) {
 		writeError(w, 400, err.Error())
 		return
 	}
-	if err := store.CreateClosure(h.db, &c); err != nil {
+	if err := store.CreateClosure(h.db(), &c); err != nil {
 		serverError(w, err)
 		return
 	}
@@ -42,7 +42,7 @@ func (h *Handler) CreateClosure(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) DeleteClosure(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
-	if err := store.DeleteClosure(h.db, id); err != nil {
+	if err := store.DeleteClosure(h.db(), id); err != nil {
 		serverError(w, err)
 		return
 	}

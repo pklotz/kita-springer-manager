@@ -11,14 +11,14 @@ import (
 // frontend on bootstrap to decide between the setup screen and the app.
 // This endpoint is unauthenticated.
 func (h *Handler) GetAuthStatus(w http.ResponseWriter, r *http.Request) {
-	configured, err := store.IsAuthConfigured(h.db)
+	configured, err := store.IsAuthConfigured(h.db())
 	if err != nil {
 		writeError(w, 500, "Server-Fehler")
 		return
 	}
 	username := ""
 	if configured {
-		if u, err := store.GetAuthUsername(h.db); err == nil {
+		if u, err := store.GetAuthUsername(h.db()); err == nil {
 			username = u
 		}
 	}
@@ -32,7 +32,7 @@ func (h *Handler) GetAuthStatus(w http.ResponseWriter, r *http.Request) {
 // configured (the auth middleware lets it through in that state). After the
 // first successful call, this endpoint requires basic-auth like every other.
 func (h *Handler) SetupAuth(w http.ResponseWriter, r *http.Request) {
-	configured, err := store.IsAuthConfigured(h.db)
+	configured, err := store.IsAuthConfigured(h.db())
 	if err != nil {
 		writeError(w, 500, "Server-Fehler")
 		return
@@ -56,7 +56,7 @@ func (h *Handler) SetupAuth(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := store.SetAuthCredentials(h.db, body.Username, body.Password); err != nil {
+	if err := store.SetAuthCredentials(h.db(), body.Username, body.Password); err != nil {
 		if errors.Is(err, store.ErrPasswordTooShort) {
 			writeError(w, 400, err.Error())
 			return
@@ -123,7 +123,7 @@ h1{font-size:1.25rem}.ok{color:#059669}</style></head>
 // (calendar.ics, worktime/export). Used by the Settings UI to render the
 // webcal:// link.
 func (h *Handler) GetDownloadToken(w http.ResponseWriter, r *http.Request) {
-	tok, err := store.GetDownloadToken(h.db)
+	tok, err := store.GetDownloadToken(h.db())
 	if err != nil {
 		writeError(w, 500, "Server-Fehler")
 		return
@@ -131,7 +131,7 @@ func (h *Handler) GetDownloadToken(w http.ResponseWriter, r *http.Request) {
 	if tok == "" {
 		// Should only happen on legacy DBs that pre-date this feature;
 		// generate one on demand so the UI always has something to show.
-		tok, err = store.RegenerateDownloadToken(h.db)
+		tok, err = store.RegenerateDownloadToken(h.db())
 		if err != nil {
 			writeError(w, 500, "Server-Fehler")
 			return
@@ -143,7 +143,7 @@ func (h *Handler) GetDownloadToken(w http.ResponseWriter, r *http.Request) {
 // RegenerateDownloadToken rotates the token, invalidating any existing
 // subscriptions. Caller is already authenticated via Basic-Auth middleware.
 func (h *Handler) RegenerateDownloadToken(w http.ResponseWriter, r *http.Request) {
-	tok, err := store.RegenerateDownloadToken(h.db)
+	tok, err := store.RegenerateDownloadToken(h.db())
 	if err != nil {
 		writeError(w, 500, "Server-Fehler")
 		return
@@ -165,16 +165,16 @@ func (h *Handler) ChangePassword(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	user, err := store.GetAuthUsername(h.db)
+	user, err := store.GetAuthUsername(h.db())
 	if err != nil {
 		writeError(w, 500, "Server-Fehler")
 		return
 	}
-	if !store.VerifyAuth(h.db, user, body.OldPassword) {
+	if !store.VerifyAuth(h.db(), user, body.OldPassword) {
 		writeError(w, 403, "Aktuelles Passwort falsch")
 		return
 	}
-	if err := store.SetAuthCredentials(h.db, body.Username, body.NewPassword); err != nil {
+	if err := store.SetAuthCredentials(h.db(), body.Username, body.NewPassword); err != nil {
 		if errors.Is(err, store.ErrPasswordTooShort) {
 			writeError(w, 400, err.Error())
 			return

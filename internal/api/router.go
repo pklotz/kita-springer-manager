@@ -1,7 +1,6 @@
 package api
 
 import (
-	"database/sql"
 	"io"
 	"io/fs"
 	"net/http"
@@ -9,12 +8,13 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/cors"
-	apimw "github.com/pak/kita-springer-manager/internal/api/middleware"
 	"github.com/pak/kita-springer-manager/internal/api/handlers"
+	apimw "github.com/pak/kita-springer-manager/internal/api/middleware"
+	"github.com/pak/kita-springer-manager/internal/db"
 	"github.com/pak/kita-springer-manager/internal/transit"
 )
 
-func NewRouter(db *sql.DB, tc *transit.Client, assets fs.FS) http.Handler {
+func NewRouter(holder *db.Holder, tc *transit.Client, assets fs.FS) http.Handler {
 	r := chi.NewRouter()
 
 	r.Use(apimw.AccessLog)
@@ -27,9 +27,9 @@ func NewRouter(db *sql.DB, tc *transit.Client, assets fs.FS) http.Handler {
 		AllowCredentials: true,
 	}))
 	// Auth runs after CORS so OPTIONS preflights aren't challenged.
-	r.Use(apimw.BasicAuth(db))
+	r.Use(apimw.BasicAuth(holder))
 
-	h := handlers.New(db, tc)
+	h := handlers.New(holder, tc)
 
 	r.Route("/api", func(r chi.Router) {
 		// Auth endpoints.
@@ -92,6 +92,12 @@ func NewRouter(db *sql.DB, tc *transit.Client, assets fs.FS) http.Handler {
 		// Multipart endpoints: handler imposes its own size limit via ParseMultipartForm.
 		r.Post("/providers/{id}/import-excel", h.ImportExcel)
 		r.Post("/kitas/import", h.ImportKitasExcel)
+
+		// Backup/Restore. Export streams the full DB; restore takes a multipart
+		// upload, swaps the live DB, and clears the password (setup flow takes
+		// over so the operator picks a fresh password for this instance).
+		r.Get("/backup", h.ExportBackup)
+		r.Post("/restore", h.RestoreBackup)
 	})
 
 	fileServer := http.FileServer(http.FS(assets))

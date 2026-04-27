@@ -181,3 +181,19 @@ export const downloadsApi = {
       providerId ? { month, provider_id: providerId } : { month }),
   calendarICS: () => blobDownload('/calendar.ics', 'kita-einsaetze.ics'),
 }
+
+// Full DB backup/restore. Restore wipes the password on the server side;
+// caller MUST clear the local token and reload right after.
+export const backupApi = {
+  download: () => {
+    const today = new Date().toISOString().slice(0, 10)
+    return blobDownload('/backup', `kita-springer-${today}.db`)
+  },
+  restore: async (file) => {
+    const fd = new FormData()
+    fd.append('file', file)
+    await api.post('/restore', fd, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    })
+  },
+}

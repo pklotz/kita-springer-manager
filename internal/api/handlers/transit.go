@@ -44,7 +44,7 @@ func (h *Handler) GetConnections(w http.ResponseWriter, r *http.Request) {
 		writeError(w, 400, "from/to stops or assignment_id required")
 		return
 	}
-	a, err := store.GetAssignment(h.db, assignmentID)
+	a, err := store.GetAssignment(h.db(), assignmentID)
 	if err != nil || a == nil {
 		writeError(w, 400, "assignment not found")
 		return
@@ -62,7 +62,7 @@ func (h *Handler) GetConnections(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	settings, _ := store.GetSettings(h.db)
+	settings, _ := store.GetSettings(h.db())
 	if from == "" {
 		from = settings.HomeStop
 	}
@@ -116,7 +116,7 @@ func (h *Handler) walkToFirstStop(conns []transit.Connection) int {
 	if len(conns) == 0 {
 		return 0
 	}
-	settings, _ := store.GetSettings(h.db)
+	settings, _ := store.GetSettings(h.db())
 	if settings == nil || (settings.HomeLat == 0 && settings.HomeLng == 0) {
 		return 0
 	}

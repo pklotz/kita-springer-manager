@@ -98,7 +98,7 @@ func (h *Handler) ImportKitasExcel(w http.ResponseWriter, r *http.Request) {
 			res.Skipped++
 			continue
 		}
-		if err := store.CreateKita(h.db, k); err != nil {
+		if err := store.CreateKita(h.db(), k); err != nil {
 			audit.L().Warn("kita.import.row", "row", i+1, "err", err.Error())
 			res.Warnings = append(res.Warnings, fmt.Sprintf("Zeile %d: konnte nicht gespeichert werden", i+1))
 			res.Skipped++

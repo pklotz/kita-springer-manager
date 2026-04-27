@@ -10,7 +10,7 @@ import (
 )
 
 func (h *Handler) GetSettings(w http.ResponseWriter, r *http.Request) {
-	s, err := store.GetSettings(h.db)
+	s, err := store.GetSettings(h.db())
 	if err != nil {
 		serverError(w, err)
 		return
@@ -38,7 +38,7 @@ func (h *Handler) UpdateSettings(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Re-geocode home address if it changed or coords are missing.
-	prev, _ := store.GetSettings(h.db)
+	prev, _ := store.GetSettings(h.db())
 	addr := strings.TrimSpace(s.HomeAddress)
 	needsGeocode := addr != "" && (prev == nil || prev.HomeAddress != addr || s.HomeLat == 0)
 	if needsGeocode {
@@ -52,13 +52,13 @@ func (h *Handler) UpdateSettings(w http.ResponseWriter, r *http.Request) {
 		s.HomeLat, s.HomeLng = 0, 0
 	}
 
-	if err := store.SaveSettings(h.db, &s); err != nil {
+	if err := store.SaveSettings(h.db(), &s); err != nil {
 		serverError(w, err)
 		return
 	}
 
 	if prev == nil || prev.Canton != s.Canton {
-		if err := store.ReseedHolidays(h.db, s.Canton); err != nil {
+		if err := store.ReseedHolidays(h.db(), s.Canton); err != nil {
 			log.Printf("reseed holidays for %s: %v", s.Canton, err)
 		}
 	}

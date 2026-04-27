@@ -27,7 +27,7 @@ func (h *Handler) ExportWorktimePDF(w http.ResponseWriter, r *http.Request) {
 	from := start.Format("2006-01-02")
 	to := start.AddDate(0, 1, -1).Format("2006-01-02")
 
-	all, err := store.ListAssignments(h.db, from, to)
+	all, err := store.ListAssignments(h.db(), from, to)
 	if err != nil {
 		serverError(w, err)
 		return
