@@ -1,6 +1,10 @@
 # Kita Springer Manager
 
 Verwaltung von Springer-Einsätzen in Kitas: Einsatzplanung, Kita-Stammdaten, Öffnungs-/Schliesstage, ÖV-Verbindungen und Kalender-Export.
+Aktuell ist die App für einen einzelnen Benutzer konzipiert, der die App auf dem lokalen Laptop oder 
+einem Server hostet. Security ist umfangreicht berücksichtigt unter Verwendung von ASVS (Application Security Verification Standard)
+incl. Authentifizierung mit Passwort. Wegen Single-User model muss kein Benutzername angegeben werden. 
+
 
 ## Architektur
 
@@ -65,6 +69,31 @@ es ein Install-Script auf Basis von `launchd`. Details und Verwaltungs-Befehle:
 make build
 ./scripts/install-macos-service.sh
 ```
+
+### Docker / Cloud-Hosting
+
+Das `Dockerfile` baut ein ~16 MB großes Distroless-Image (statisches Binary,
+keine Shell, läuft als nonroot). Frontend + Backend werden in einem mehrstufigen
+Build aus dem Repo gebaut.
+
+```bash
+docker build -t kita-springer .
+
+# Lokal mit Volume für die DB, Port 80 nach außen, 8080 intern.
+docker volume create kita-data
+docker run -d --name kita-springer \
+    -p 80:8080 \
+    -v kita-data:/data \
+    -e KITA_INITIAL_PASSWORD='ein-langes-passwort' \
+    kita-springer
+```
+
+- Container hört intern auf `:8080`. Privilegierte Ports <1024 darf der nonroot-
+  User nicht binden — Mapping erfolgt extern via `-p`.
+- `/data` ist als `VOLUME` deklariert (DB + Audit-Log). Für Persistenz ein
+  Named Volume oder Bind-Mount angeben.
+- Hinter einem TLS-Reverse-Proxy betreiben (Basic-Auth-Credentials sind im
+  Klartext) — Cloud-Plattformen wie Cloud Run / Fly.io übernehmen TLS automatisch.
 
 ### Konfiguration
 

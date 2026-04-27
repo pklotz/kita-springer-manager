@@ -1,0 +1,34 @@
+# Bereits gebautes Backend-Binary (Image baut frisch).
+bin/
+
+# Lokale SQLite-DB darf NICHT ins Image — Datenleck und überschreibt Volume.
+data/
+
+# Frontend-Artefakte werden in Stage 1 gebaut, nicht aus dem Host kopiert.
+frontend/node_modules/
+frontend/dist/
+
+# VCS, IDE, Editor.
+.git/
+.github/
+.gitignore
+.idea/
+.vscode/
+.DS_Store
+
+# Claude/Settings.
+.claude/
+
+# Doku & lokale Dateien.
+docs/
+README.md
+LICENSE
+*.md
+
+# Lokale Daten / Excel / PDF, die im Repo-Root liegen.
+*.xlsx
+*.pdf
+
+# Dockerfile selbst muss nicht in den Context.
+Dockerfile
+.dockerignore
