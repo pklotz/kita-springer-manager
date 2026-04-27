@@ -160,6 +160,41 @@ go run ./cmd/scraper --source=stadt_bern     --output=kitas_stadt_bern.xlsx
 go run ./cmd/scraper --source=stiftung_bern  --output=kitas_stiftung_bern.xlsx
 ```
 
+## Backup-CLI
+
+Für Backup/Restore ohne laufenden Server (z. B. Cron-Snapshot, Migration zwischen
+Maschinen). Funktional identisch zum Web-UI in *Einstellungen → Datenbank-Backup*.
+
+Schnellster Weg via Wrapper-Script — baut die Go-CLI bei Bedarf automatisch:
+
+```bash
+# Backup erstellen (default: data/app.db → kita-springer-YYYY-MM-DD.db)
+./scripts/backup.sh export
+
+# Backup-Datei prüfen, ohne irgendwas zu ändern
+./scripts/backup.sh verify -in kita-springer-2026-04-27.db
+
+# Restore — VOR DEM AUFRUF DEN SERVER STOPPEN
+./scripts/backup.sh restore -in kita-springer-2026-04-27.db -y
+```
+
+Direkt das Binary bauen und nutzen:
+
+```bash
+make build-backup    # → bin/kita-springer-backup
+./bin/kita-springer-backup export --db data/app.db
+```
+
+Mit reinem `sqlite3` geht's auch in einer Zeile:
+
+```bash
+sqlite3 data/app.db "VACUUM INTO 'kita-springer-$(date +%F).db'"
+```
+
+Der CLI-Vorteil gegenüber `sqlite3` direkt: validiert das Schema vor dem Restore,
+kennt den Default-DB-Pfad und braucht kein extern installiertes `sqlite3`-Paket
+(z. B. im Distroless-Container).
+
 ## REST-API (Referenz)
 
 Alle Routen unter `/api`.
