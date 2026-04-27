@@ -42,7 +42,13 @@
       "Bash(curl -sSL -i \"http://localhost:9092/api/worktime/export?month=2026-04&provider_id=beee0670-6b69-464f-aa72-94670fb966fc\")",
       "Bash(curl *)",
       "Bash(make build *)",
-      "Bash(pkill -f \"kita-springer.*--db=/tmp\")"
+      "Bash(pkill -f \"kita-springer.*--db=/tmp\")",
+      "Bash(make lint *)",
+      "Bash(make vuln *)",
+      "Bash(make build-darwin-universal *)",
+      "Bash(chmod +x *)",
+      "Bash(bash -n /Users/pak/Projects/kita-springer-manager/scripts/install-macos-service.sh)",
+      "Bash(bash -n /Users/pak/Projects/kita-springer-manager/scripts/uninstall-macos-service.sh)"
     ]
   }
 }

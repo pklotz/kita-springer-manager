@@ -47,6 +47,25 @@ make build              # bin/kita-springer
 ./bin/kita-springer
 ```
 
+Plattform-spezifische macOS-Builds (z. B. zur Weitergabe):
+
+```bash
+make build-darwin-arm64       # Apple Silicon
+make build-darwin-amd64       # Intel
+make build-darwin-universal   # Universal Binary für beide
+```
+
+### Als macOS-Service betreiben
+
+Für den Hintergrundbetrieb (ohne Terminal-Fenster, Auto-Start beim Login) gibt
+es ein Install-Script auf Basis von `launchd`. Details und Verwaltungs-Befehle:
+[`docs/macos-service.md`](docs/macos-service.md).
+
+```bash
+make build
+./scripts/install-macos-service.sh
+```
+
 ### Konfiguration
 
 Server-Flags bzw. Env-Variablen (Flag hat Vorrang):

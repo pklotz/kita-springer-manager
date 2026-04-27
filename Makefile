@@ -1,10 +1,22 @@
-.PHONY: run build frontend-build frontend-dev dev lint vuln check
+.PHONY: run build build-darwin-arm64 build-darwin-amd64 build-darwin-universal frontend-build frontend-dev dev lint vuln check
 
 run:
 	go run ./cmd/server
 
 build:
 	go build -o bin/kita-springer ./cmd/server
+
+build-darwin-arm64:
+	GOOS=darwin GOARCH=arm64 go build -o bin/kita-springer-darwin-arm64 ./cmd/server
+
+build-darwin-amd64:
+	GOOS=darwin GOARCH=amd64 go build -o bin/kita-springer-darwin-amd64 ./cmd/server
+
+# Universal Binary für Intel- und Apple-Silicon-Macs (benötigt lipo, ist auf macOS vorinstalliert).
+build-darwin-universal: build-darwin-arm64 build-darwin-amd64
+	lipo -create -output bin/kita-springer-darwin-universal \
+		bin/kita-springer-darwin-arm64 \
+		bin/kita-springer-darwin-amd64
 
 frontend-build:
 	cd frontend && npm run build
