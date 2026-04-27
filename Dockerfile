@@ -1,7 +1,10 @@
 # syntax=docker/dockerfile:1.7
 
 # ---------- Stage 1: Frontend bauen ----------
-FROM node:20-alpine AS frontend
+# --platform=$BUILDPLATFORM zwingt diese Stage auf die Host-Architektur — das
+# Frontend-Build ist arch-unabhängig (JS/CSS), also keine Notwendigkeit für
+# QEMU-Emulation beim Multi-Arch-Build.
+FROM --platform=$BUILDPLATFORM node:20-alpine AS frontend
 
 WORKDIR /app/frontend
 
@@ -14,7 +17,12 @@ RUN npm run build
 
 
 # ---------- Stage 2: Backend bauen (statisch, ohne CGO) ----------
-FROM golang:1.25-alpine AS backend
+# Builder läuft ebenfalls auf der Host-Architektur und cross-compiliert via
+# GOARCH zur Ziel-Plattform — schneller als unter QEMU zu emulieren.
+FROM --platform=$BUILDPLATFORM golang:1.25-alpine AS backend
+
+ARG TARGETOS
+ARG TARGETARCH
 
 WORKDIR /src
 
@@ -27,7 +35,7 @@ COPY . .
 # die Assets per `go:embed` einzieht.
 COPY --from=frontend /app/frontend/dist ./frontend/dist
 
-RUN CGO_ENABLED=0 GOOS=linux go build \
+RUN CGO_ENABLED=0 GOOS=$TARGETOS GOARCH=$TARGETARCH go build \
         -trimpath \
         -ldflags="-s -w" \
         -o /out/kita-springer \
