@@ -20,14 +20,15 @@ BUILDER_NAME="kita-multiarch"
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$REPO_ROOT"
 
-# Working-tree muss sauber sein, sonst zeigt der SHA-Tag auf einen Build mit
-# uncommitteten Änderungen — sehr verwirrend bei späteren Rebuilds.
-if [[ -n "$(git status --porcelain)" ]]; then
-    echo "✗ Working-tree hat uncommittete Änderungen:" >&2
-    git status --short >&2
+# Modifikationen an getrackten Files können den :SHA-Tag verzerren — Image
+# enthält dann Code, der nicht im genannten Commit steht. Wir warnen nur,
+# weil viele Modifikationen (z.B. .claude/settings.local.json) per
+# .dockerignore eh nicht im Image landen. User entscheidet.
+if ! git diff --quiet HEAD; then
+    echo "⚠  Modifikationen an getrackten Dateien:" >&2
+    git diff --name-only HEAD | sed 's/^/   /' >&2
+    echo "   (falls eine davon im Image-Build relevant ist, vorher committen)" >&2
     echo >&2
-    echo "Bitte zuerst committen oder stashen — sonst zeigt der :SHA-Tag auf inkonsistenten Code." >&2
-    exit 1
 fi
 
 SHA="$(git rev-parse --short HEAD)"
