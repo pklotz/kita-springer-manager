@@ -51,9 +51,11 @@ jobs:
           cache: 'npm'
           cache-dependency-path: frontend/package-lock.json
 
-      - name: Install frontend dependencies
+      - name: Build frontend (für go:embed; node_modules bleibt für sbom-frontend)
         working-directory: frontend
-        run: npm ci
+        run: |
+          npm ci
+          npm run build
 
       - name: Install cyclonedx-gomod
         run: |
