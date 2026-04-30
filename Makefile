@@ -1,5 +1,5 @@
 .PHONY: run build build-backup build-darwin-arm64 build-darwin-amd64 build-darwin-universal frontend-build frontend-dev dev lint vuln check \
-        docker-build sbom sbom-backend sbom-frontend sbom-clean grype grype-image tools-install
+        docker-build sbom sbom-backend sbom-frontend sbom-clean grype grype-image tools-install release
 
 FRONTEND_DIR    := frontend
 
@@ -117,3 +117,10 @@ grype-image: docker-build
 tools-install:
 	go install github.com/CycloneDX/cyclonedx-gomod/cmd/cyclonedx-gomod@latest
 	go install github.com/anchore/grype/cmd/grype@latest
+
+# ── GitHub Release ────────────────────────────────────────────────────────────
+# Cross-Plattform-Binaries bauen und als GitHub-Release veröffentlichen.
+# Default: Tag muss auf HEAD liegen. Override via VERSION=… ; ALLOW_DIRTY=1 ;
+# OVERWRITE=1. Details siehe scripts/release.sh.
+release:
+	./scripts/release.sh
