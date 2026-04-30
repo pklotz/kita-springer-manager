@@ -37,5 +37,6 @@ data/*.db-wal
 data/*.db-shm
 data/audit.log
 bin/
+sbom/
 frontend/node_modules/
 frontend/dist/

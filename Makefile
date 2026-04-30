@@ -1,4 +1,16 @@
-.PHONY: run build build-backup build-darwin-arm64 build-darwin-amd64 build-darwin-universal frontend-build frontend-dev dev lint vuln check
+.PHONY: run build build-backup build-darwin-arm64 build-darwin-amd64 build-darwin-universal frontend-build frontend-dev dev lint vuln check \
+        docker-build sbom sbom-backend sbom-frontend sbom-clean grype grype-image tools-install
+
+FRONTEND_DIR    := frontend
+
+DOCKER_IMAGE    := kita-springer
+DOCKER_TAG      := latest
+DOCKER_PLATFORM := linux/amd64
+
+SBOM_DIR        := sbom
+GOBIN           := $(shell go env GOPATH)/bin
+CYCLONEDX_GOMOD := $(shell command -v cyclonedx-gomod 2>/dev/null || echo $(GOBIN)/cyclonedx-gomod)
+GRYPE           := $(shell command -v grype 2>/dev/null || echo $(GOBIN)/grype)
 
 run:
 	go run ./cmd/server
@@ -52,3 +64,56 @@ vuln:
 
 # Composite quality gate — same checks the CI runs.
 check: lint vuln
+
+# ── Docker (linux/amd64) ──────────────────────────────────────────────────────
+
+# Lokales Image bauen (single-arch), z.B. damit grype-image es scannen kann.
+# Multi-Arch-Push läuft separat über scripts/docker-push.sh.
+docker-build:
+	docker buildx build --platform $(DOCKER_PLATFORM) \
+		-t $(DOCKER_IMAGE):$(DOCKER_TAG) \
+		--load .
+
+# ── SBOM (CycloneDX) ──────────────────────────────────────────────────────────
+# Erzeugt zwei separate CycloneDX-SBOMs (Backend + Frontend) unter sbom/.
+# Backend = cmd/server (das, was tatsächlich ins Docker-Image kommt).
+
+sbom: sbom-backend sbom-frontend
+
+# Backend: nur die Module, die wirklich ins Server-Binary gelinkt werden.
+sbom-backend:
+	@mkdir -p $(SBOM_DIR)
+	$(CYCLONEDX_GOMOD) app -json \
+		-output $(SBOM_DIR)/backend.cdx.json \
+		-main cmd/server \
+		-licenses .
+
+# Frontend: scannt node_modules. --ignore-npm-errors toleriert kleine
+# npm-ls-Inkonsistenzen, ohne den Lauf abzubrechen.
+sbom-frontend:
+	@mkdir -p $(SBOM_DIR)
+	cd $(FRONTEND_DIR) && npx --yes @cyclonedx/cyclonedx-npm \
+		--ignore-npm-errors \
+		--output-format JSON \
+		--output-file $(CURDIR)/$(SBOM_DIR)/frontend.cdx.json
+
+sbom-clean:
+	rm -rf $(SBOM_DIR)
+
+# ── Vulnerability-Scan (Grype) ────────────────────────────────────────────────
+# Scannt beide CycloneDX-SBOMs. Frischt sie zuvor auf.
+grype: sbom
+	@echo "── Backend ──"
+	$(GRYPE) sbom:$(SBOM_DIR)/backend.cdx.json
+	@echo ""
+	@echo "── Frontend ──"
+	$(GRYPE) sbom:$(SBOM_DIR)/frontend.cdx.json
+
+# Scannt das fertig gebaute Docker-Image direkt (inkl. Basisimage-Layer).
+grype-image: docker-build
+	$(GRYPE) $(DOCKER_IMAGE):$(DOCKER_TAG)
+
+# Komfort: installiert die nötigen CLI-Tools (Grype kann zusätzlich via brew kommen).
+tools-install:
+	go install github.com/CycloneDX/cyclonedx-gomod/cmd/cyclonedx-gomod@latest
+	go install github.com/anchore/grype/cmd/grype@latest
