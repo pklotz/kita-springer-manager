@@ -7,8 +7,28 @@
       <h2 class="text-xl font-semibold">Historie</h2>
     </div>
 
+    <div v-if="pastAssignments.length" class="bg-white rounded-xl border border-gray-100 shadow-sm p-3 mb-3 space-y-2">
+      <div class="flex gap-2 flex-wrap">
+        <select v-model="providerFilter"
+          class="flex-1 min-w-[10ch] rounded-lg border border-gray-200 px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500">
+          <option value="">Alle Träger</option>
+          <option v-for="p in providersInHistory" :key="p.id" :value="p.id">{{ p.name }}</option>
+        </select>
+        <select v-model="kitaFilter"
+          class="flex-1 min-w-[10ch] rounded-lg border border-gray-200 px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500">
+          <option value="">Alle Kitas</option>
+          <option v-for="k in kitasInHistory" :key="k.id" :value="k.id">{{ k.name }}</option>
+        </select>
+      </div>
+      <div class="relative">
+        <Search class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+        <input v-model="query" type="text" placeholder="In Notizen, Gruppe, Kita suchen…"
+          class="w-full pl-9 pr-3 py-1.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500" />
+      </div>
+    </div>
+
     <div v-if="months.length === 0" class="text-center text-gray-400 py-16">
-      Keine vergangenen Einsätze
+      {{ pastAssignments.length === 0 ? 'Keine vergangenen Einsätze' : 'Keine Treffer für diese Filter' }}
     </div>
 
     <div v-for="month in months" :key="month.key" class="mb-6">
@@ -77,7 +97,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { RouterLink } from 'vue-router'
-import { ArrowLeft, ArrowRight, Clock } from 'lucide-vue-next'
+import { ArrowLeft, ArrowRight, Clock, Search } from 'lucide-vue-next'
 import dayjs from 'dayjs'
 import 'dayjs/locale/de'
 import { assignmentsApi } from '../api'
@@ -92,6 +112,9 @@ dayjs.locale('de')
 const assignments = ref([])
 const editAssignment = ref(null)
 const today = dayjs().format('YYYY-MM-DD')
+const providerFilter = ref('')
+const kitaFilter = ref('')
+const query = ref('')
 
 const day = (d) => dayjs(d).format('D')
 const weekday = (d) => dayjs(d).format('dd')
@@ -110,10 +133,43 @@ const breakWarn = (a) => {
 const differs = (a) =>
   hasActual(a) && netMin(a) !== diffMinutes(a.start_time, a.end_time)
 
-const months = computed(() => {
-  const past = assignments.value
+const pastAssignments = computed(() =>
+  assignments.value
     .filter(a => a.date < today && a.status !== 'free')
     .sort((x, y) => y.date.localeCompare(x.date))
+)
+
+const providersInHistory = computed(() => {
+  const seen = new Map()
+  for (const a of pastAssignments.value) {
+    if (a.provider?.name && a.provider_id && !seen.has(a.provider_id)) {
+      seen.set(a.provider_id, { id: a.provider_id, name: a.provider.name })
+    }
+  }
+  return [...seen.values()].sort((a, b) => a.name.localeCompare(b.name))
+})
+
+const kitasInHistory = computed(() => {
+  const seen = new Map()
+  for (const a of pastAssignments.value) {
+    if (a.kita?.name && a.kita_id && !seen.has(a.kita_id)) {
+      seen.set(a.kita_id, { id: a.kita_id, name: a.kita.name })
+    }
+  }
+  return [...seen.values()].sort((a, b) => a.name.localeCompare(b.name))
+})
+
+const months = computed(() => {
+  const q = query.value.trim().toLowerCase()
+  const past = pastAssignments.value.filter(a => {
+    if (providerFilter.value && a.provider_id !== providerFilter.value) return false
+    if (kitaFilter.value && a.kita_id !== kitaFilter.value) return false
+    if (q) {
+      const hay = [a.kita?.name, a.group_name, a.notes].filter(Boolean).join(' ').toLowerCase()
+      if (!hay.includes(q)) return false
+    }
+    return true
+  })
 
   const groups = {}
   for (const a of past) {
