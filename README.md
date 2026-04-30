@@ -102,6 +102,65 @@ und pusht in einem Schritt mit `:latest` und `:<git-sha>`-Tag):
 ./scripts/docker-push.sh
 ```
 
+## Releases
+
+### Fertiges Binary herunterladen
+
+Auf der [Releases-Seite](https://github.com/pklotz/kita-springer-manager/releases)
+gibt's für jede veröffentlichte Version ein nacktes Binary pro Plattform —
+Frontend ist eingebettet, also keine weiteren Dateien nötig:
+
+| Datei | Plattform |
+|-------|-----------|
+| `kita-springer-vX.Y.Z-linux-amd64`     | Linux x86_64 |
+| `kita-springer-vX.Y.Z-linux-arm64`     | Linux arm64 (z. B. Raspberry Pi 4/5) |
+| `kita-springer-vX.Y.Z-darwin-arm64`    | macOS Apple Silicon |
+| `kita-springer-vX.Y.Z-darwin-amd64`    | macOS Intel |
+| `kita-springer-vX.Y.Z-darwin-universal`| macOS Universal (beide Architekturen) |
+| `SHA256SUMS.txt`                        | Prüfsummen aller Binaries |
+
+```bash
+# Beispiel macOS Apple Silicon:
+curl -LO https://github.com/pklotz/kita-springer-manager/releases/download/v0.1.0/kita-springer-v0.1.0-darwin-arm64
+chmod +x kita-springer-v0.1.0-darwin-arm64
+./kita-springer-v0.1.0-darwin-arm64
+```
+
+Auf macOS muss beim ersten Start ggf. die Quarantäne-Markierung entfernt werden
+(`xattr -d com.apple.quarantine <binary>`), weil das Binary nicht signiert ist.
+
+### Neues Release erstellen
+
+Versionierung folgt [SemVer](https://semver.org) (`vMAJOR.MINOR.PATCH`):
+**PATCH** für Bugfixes, **MINOR** für rückwärtskompatible Features, **MAJOR**
+für Breaking Changes. Solange das Projekt im `0.x.y`-Bereich ist, dürfen
+Breaking Changes auch in MINOR-Bumps mit.
+
+```bash
+git tag v0.1.0
+git push origin v0.1.0
+make release
+```
+
+`make release` führt `scripts/release.sh` aus und macht folgendes:
+
+1. Validiert: Tag liegt auf HEAD (oder `VERSION=…` mitgegeben), Format `vX.Y.Z[-prerelease]`, Working Tree clean, `gh` ist eingeloggt.
+2. Baut das Frontend einmal (`go:embed` zieht es in jedes Binary).
+3. Cross-compiled für `linux/amd64`, `linux/arm64`, `darwin/amd64`, `darwin/arm64` (pure Go, kein CGO).
+4. Wenn `lipo` verfügbar: zusätzlich `darwin-universal`.
+5. Erzeugt `SHA256SUMS.txt` und legt das GitHub-Release mit `gh release create` an.
+
+Voraussetzungen einmalig: [`gh` CLI](https://cli.github.com/) installiert und
+`gh auth login` gemacht.
+
+Escape hatches:
+
+```bash
+VERSION=v0.1.0 make release    # ohne Tag auf HEAD
+ALLOW_DIRTY=1   make release   # ungebackte lokale Modifikationen erlauben
+OVERWRITE=1     make release   # bestehendes Release ersetzen (Tag bleibt)
+```
+
 ### Konfiguration
 
 Server-Flags bzw. Env-Variablen (Flag hat Vorrang):
