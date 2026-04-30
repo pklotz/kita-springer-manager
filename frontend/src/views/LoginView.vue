@@ -39,9 +39,8 @@ const submit = async () => {
   error.value = ''
   try {
     await authApi.login(password.value)
-    // Reload so main.js re-bootstraps and mounts the full App with axios
-    // already carrying the new Authorization header.
-    window.location.reload()
+    // setToken flips the reactive loggedIn flag — App.vue swaps to the main
+    // UI without a page reload.
   } catch (e) {
     error.value = e.message || 'Anmeldung fehlgeschlagen'
     password.value = ''

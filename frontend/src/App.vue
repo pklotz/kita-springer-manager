@@ -1,5 +1,6 @@
 <template>
-  <div class="min-h-screen flex flex-col">
+  <LoginView v-if="!loggedIn" />
+  <div v-else class="min-h-screen flex flex-col">
     <header class="bg-brand-500 text-white shadow-md">
       <div class="max-w-2xl lg:max-w-4xl mx-auto px-4 py-3 flex items-center justify-between gap-3">
         <span class="font-semibold text-lg">Kita Springer</span>
@@ -20,16 +21,16 @@
     <main class="flex-1 max-w-2xl lg:max-w-4xl w-full mx-auto px-4 py-6">
       <RouterView />
     </main>
-
-    <ToastContainer />
   </div>
+  <ToastContainer />
 </template>
 
 <script setup>
 import { RouterLink, RouterView } from 'vue-router'
 import { LogOut } from 'lucide-vue-next'
 import ToastContainer from './components/ToastContainer.vue'
-import { authApi } from './api'
+import LoginView from './views/LoginView.vue'
+import { authApi, loggedIn } from './api'
 
 const logout = async () => {
   if (!confirm('Wirklich abmelden?')) return

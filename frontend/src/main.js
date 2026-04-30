@@ -3,15 +3,14 @@ import { createPinia } from 'pinia'
 import router from './router'
 import App from './App.vue'
 import SetupView from './views/SetupView.vue'
-import LoginView from './views/LoginView.vue'
-import { authApi, isLoggedIn } from './api'
+import { authApi } from './api'
 import './style.css'
 
 // Bumped whenever a backend or SW change makes old caches incompatible.
 // On a version mismatch we unregister all service workers and clear all
 // caches once, then reload — guarantees the user never sits on a stale
 // pre-auth shell.
-const APP_VERSION = '4'
+const APP_VERSION = '5'
 
 async function purgeStaleServiceWorker() {
   if (localStorage.getItem('app_version') === APP_VERSION) return false
@@ -54,10 +53,8 @@ async function bootstrap() {
     createApp({ render: () => h(SetupView) }).mount('#app')
     return
   }
-  if (!isLoggedIn()) {
-    createApp({ render: () => h(LoginView) }).mount('#app')
-    return
-  }
+  // App.vue handles the logged-in / logged-out switch reactively, so a 401
+  // from the server can swap to LoginView without a page reload.
   createApp(App).use(createPinia()).use(router).mount('#app')
 }
 

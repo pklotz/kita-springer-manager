@@ -1,4 +1,5 @@
 import axios from 'axios'
+import { ref } from 'vue'
 import { showToast } from '../toast'
 
 const api = axios.create({ baseURL: '/api' })
@@ -10,6 +11,11 @@ const api = axios.create({ baseURL: '/api' })
 // Logout explicitly clears the value.
 const TOKEN_KEY = 'auth_token'
 
+// Reactive login state. App.vue watches this to swap between LoginView and
+// the main UI without a page reload — so an expired-session 401 from the
+// server can switch us to the login screen instantly.
+export const loggedIn = ref(!!localStorage.getItem(TOKEN_KEY))
+
 const restoredToken = localStorage.getItem(TOKEN_KEY)
 if (restoredToken) {
   api.defaults.headers.common['Authorization'] = 'Basic ' + restoredToken
@@ -19,14 +25,14 @@ function setToken(password) {
   const token = btoa('admin:' + password)
   localStorage.setItem(TOKEN_KEY, token)
   api.defaults.headers.common['Authorization'] = 'Basic ' + token
+  loggedIn.value = true
 }
 
 function clearToken() {
   localStorage.removeItem(TOKEN_KEY)
   delete api.defaults.headers.common['Authorization']
+  loggedIn.value = false
 }
-
-export const isLoggedIn = () => !!localStorage.getItem(TOKEN_KEY)
 
 let lastAuthToastAt = 0
 
@@ -34,19 +40,21 @@ api.interceptors.response.use(
   (res) => res,
   (err) => {
     if (err.response?.status === 401) {
-      // Stored token is no longer valid — drop it and bounce to login.
-      // Avoid loops: only redirect if we're not already on the login screen.
       const url = err.config?.url || ''
       const isAuthCall = url.includes('/auth/')
       if (!isAuthCall) {
+        // Stored token no longer valid — flip reactive auth state so the App
+        // swaps to LoginView immediately. No page reload, no setTimeout, so
+        // in-flight components don't have time to render error UI.
+        const wasLoggedIn = loggedIn.value
         clearToken()
-        const now = Date.now()
-        if (now - lastAuthToastAt > 3000) {
-          lastAuthToastAt = now
-          showToast('Sitzung abgelaufen — bitte erneut anmelden.', 'error')
+        if (wasLoggedIn) {
+          const now = Date.now()
+          if (now - lastAuthToastAt > 3000) {
+            lastAuthToastAt = now
+            showToast('Sitzung abgelaufen — bitte erneut anmelden.', 'error')
+          }
         }
-        // Defer a tick so any in-flight requests can settle.
-        setTimeout(() => window.location.replace('/'), 250)
       }
       return Promise.reject(err)
     }
