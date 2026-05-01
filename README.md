@@ -95,12 +95,7 @@ docker run -d --name kita-springer \
 - Hinter einem TLS-Reverse-Proxy betreiben (Basic-Auth-Credentials sind im
   Klartext) — Cloud-Plattformen wie Cloud Run / Fly.io übernehmen TLS automatisch.
 
-Für Pushes nach ghcr.io gibt's ein Multi-Arch-Wrapper-Script (baut amd64+arm64
-und pusht in einem Schritt mit `:latest` und `:<git-sha>`-Tag):
-
-```bash
-./scripts/docker-push.sh
-```
+Für Pushes nach ghcr.io siehe [Docker-Image veröffentlichen](#docker-image-nach-ghcrio-veröffentlichen).
 
 ## Releases
 
@@ -161,7 +156,56 @@ ALLOW_DIRTY=1   make release   # ungebackte lokale Modifikationen erlauben
 OVERWRITE=1     make release   # bestehendes Release ersetzen (Tag bleibt)
 ```
 
-### Konfiguration
+### Docker-Image nach ghcr.io veröffentlichen
+
+Das Container-Image landet als **GitHub Package** (Container Registry) am Repo
+und ist standardmässig **privat** — auch wenn das Repo public wäre. Sichtbarkeit
+und Zugriff lassen sich nachträglich auf der Package-Seite anpassen
+(`https://github.com/pklotz/kita-springer-manager/pkgs/container/kita-springer-manager`
+→ *Package settings*).
+
+```bash
+echo $GHCR_PAT | docker login ghcr.io -u pklotz --password-stdin
+make docker-push
+```
+
+`make docker-push` ruft `scripts/docker-push.sh` auf:
+
+1. Multi-Arch-Build (`linux/amd64` + `linux/arm64`) per `docker buildx`.
+2. Tags: `:latest` und `:<short-git-sha>`.
+3. Push in einem Rutsch.
+
+Voraussetzungen einmalig:
+
+- `gh auth login` oder ein **Personal Access Token** (Classic mit Scope
+  `write:packages` oder Fine-grained mit Permission *Packages: Read & Write*
+  fürs eigene Repo) als `$GHCR_PAT`.
+- `docker buildx` mit `docker-container`-Driver — das Script legt den Builder
+  bei Bedarf selbst an.
+
+Override-Variablen:
+
+```bash
+IMAGE=ghcr.io/foo/bar     make docker-push   # anderes Repo
+PLATFORMS=linux/amd64     make docker-push   # nur eine Architektur
+```
+
+#### Image privat vom Deployment ziehen
+
+Da das Image privat ist, braucht der Pull-Host Auth — ein PAT mit `read:packages`
+genügt. Beispiel auf dem Deployment-Server:
+
+```bash
+echo $GHCR_TOKEN | docker login ghcr.io -u pklotz --password-stdin
+docker pull ghcr.io/pklotz/kita-springer-manager:latest
+```
+
+Wenn das Package mit dem Repo verknüpft ist (Package-Seite → *Manage Actions
+access* → *Connect repository*), erbt es die Repo-Permissions. In GitHub Actions
+reicht dann das eingebaute `GITHUB_TOKEN` mit `permissions: packages: read` —
+keine separaten PATs nötig.
+
+## Konfiguration
 
 Server-Flags bzw. Env-Variablen (Flag hat Vorrang):
 
