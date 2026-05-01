@@ -1,5 +1,5 @@
 .PHONY: run build build-backup build-darwin-arm64 build-darwin-amd64 build-darwin-universal frontend-build frontend-dev dev lint vuln check \
-        docker-build sbom sbom-backend sbom-frontend sbom-clean grype grype-image tools-install release
+        docker-build docker-push sbom sbom-backend sbom-frontend sbom-clean grype grype-image tools-install release
 
 FRONTEND_DIR    := frontend
 
@@ -68,11 +68,16 @@ check: lint vuln
 # ── Docker (linux/amd64) ──────────────────────────────────────────────────────
 
 # Lokales Image bauen (single-arch), z.B. damit grype-image es scannen kann.
-# Multi-Arch-Push läuft separat über scripts/docker-push.sh.
 docker-build:
 	docker buildx build --platform $(DOCKER_PLATFORM) \
 		-t $(DOCKER_IMAGE):$(DOCKER_TAG) \
 		--load .
+
+# Multi-Arch-Image (linux/amd64 + linux/arm64) nach ghcr.io pushen,
+# Tags: :latest und :<short-git-sha>. Voraussetzung: `docker login ghcr.io`
+# mit PAT (write:packages). Override: IMAGE=ghcr.io/foo/bar make docker-push
+docker-push:
+	./scripts/docker-push.sh
 
 # ── SBOM (CycloneDX) ──────────────────────────────────────────────────────────
 # Erzeugt zwei separate CycloneDX-SBOMs (Backend + Frontend) unter sbom/.
