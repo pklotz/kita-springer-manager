@@ -2,6 +2,7 @@ package store
 
 import (
 	"database/sql"
+	"encoding/json"
 	"time"
 
 	"github.com/google/uuid"
@@ -18,6 +19,9 @@ const assignmentSelect = `
 	       COALESCE(a.status,'scheduled'), COALESCE(a.source,'manual'),
 	       COALESCE(a.import_hash,''), COALESCE(a.notes,''), a.created_at,
 	       COALESCE(k.name,''), COALESCE(k.address,''), COALESCE(k.stop_name,''),
+	       COALESCE(k.stops,'[]'), COALESCE(k.phone,''), COALESCE(k.email,''),
+	       COALESCE(k.leitung_name,''), COALESCE(k.photo_url,''),
+	       COALESCE(k.groups,'[]'), COALESCE(k.notes,''),
 	       COALESCE(p.name,''), COALESCE(p.color_hex,''), COALESCE(p.min_break_minutes,30)
 	FROM assignments a
 	LEFT JOIN kitas    k ON k.id = a.kita_id
@@ -63,15 +67,27 @@ func scanAssignments(rows *sql.Rows) ([]models.Assignment, error) {
 		var a models.Assignment
 		a.Kita = &models.Kita{}
 		a.Provider = &models.Provider{}
+		var stopsJSON, groupsJSON string
 		if err := rows.Scan(
 			&a.ID, &a.KitaID, &a.ProviderID,
 			&a.GroupName, &a.Date, &a.StartTime, &a.EndTime,
 			&a.ActualStartTime, &a.ActualBreakStart, &a.ActualBreakEnd, &a.ActualEndTime,
 			&a.Status, &a.Source, &a.ImportHash, &a.Notes, &a.CreatedAt,
 			&a.Kita.Name, &a.Kita.Address, &a.Kita.StopName,
+			&stopsJSON, &a.Kita.Phone, &a.Kita.Email,
+			&a.Kita.LeitungName, &a.Kita.PhotoURL,
+			&groupsJSON, &a.Kita.Notes,
 			&a.Provider.Name, &a.Provider.ColorHex, &a.Provider.MinBreakMinutes,
 		); err != nil {
 			return nil, err
+		}
+		json.Unmarshal([]byte(stopsJSON), &a.Kita.Stops)   //nolint:errcheck
+		json.Unmarshal([]byte(groupsJSON), &a.Kita.Groups) //nolint:errcheck
+		if a.Kita.Stops == nil {
+			a.Kita.Stops = []string{}
+		}
+		if a.Kita.Groups == nil {
+			a.Kita.Groups = []string{}
 		}
 		a.Kita.ID = a.KitaID
 		a.Provider.ID = a.ProviderID

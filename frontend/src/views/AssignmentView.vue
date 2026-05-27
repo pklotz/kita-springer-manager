@@ -47,12 +47,17 @@
 
       <div class="flex items-start gap-2 text-gray-700 mb-2">
         <MapPin class="w-4 h-4 text-gray-400 mt-0.5" />
-        <div>
+        <div class="flex-1 min-w-0">
           <div>{{ assignment.kita?.address || '–' }}</div>
           <div class="text-sm text-gray-500">
             {{ kitaStops.length > 1 ? 'Haltestellen' : 'Haltestelle' }}: {{ kitaStops.join(' · ') || '–' }}
           </div>
         </div>
+        <button v-if="assignment.kita" @click="showKitaPanel = true"
+          class="p-1 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors shrink-0"
+          title="Kita-Details anzeigen">
+          <MoreHorizontal class="w-4 h-4" />
+        </button>
       </div>
       <div v-if="assignment.notes" class="flex items-start gap-2 text-gray-700 mt-3 pt-3 border-t">
         <FileText class="w-4 h-4 text-gray-400 mt-0.5" />
@@ -97,6 +102,8 @@
 
     <AssignmentForm v-if="showEditForm" :assignment="assignment"
       @close="showEditForm = false" @saved="onSaved" @deleted="onDeleted" />
+
+    <KitaDetailPanel :kita="showKitaPanel ? assignment.kita : null" :provider="assignment.provider" @close="showKitaPanel = false" />
   </div>
 
   <div v-else class="text-center text-gray-400 py-16">Wird geladen…</div>
@@ -105,12 +112,13 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { ArrowLeft, Clock, MapPin, FileText, CheckCircle2, Pencil, Footprints } from 'lucide-vue-next'
+import { ArrowLeft, Clock, MapPin, FileText, CheckCircle2, Pencil, Footprints, MoreHorizontal } from 'lucide-vue-next'
 import dayjs from 'dayjs'
 import 'dayjs/locale/de'
 import { assignmentsApi, transitApi } from '../api'
 import ConnectionCard from '../components/ConnectionCard.vue'
 import AssignmentForm from '../components/AssignmentForm.vue'
+import KitaDetailPanel from '../components/KitaDetailPanel.vue'
 import { diffMinutes, formatHours } from '../utils/time'
 
 dayjs.locale('de')
@@ -125,6 +133,7 @@ const error = ref(null)
 const customTime = ref('')
 const isArrival = ref(true)
 const showEditForm = ref(false)
+const showKitaPanel = ref(false)
 
 const formatDate = (d) => dayjs(d).format('dddd, D. MMMM YYYY')
 
