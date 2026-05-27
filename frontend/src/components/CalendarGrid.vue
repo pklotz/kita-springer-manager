@@ -16,10 +16,12 @@
     <div class="grid grid-cols-7 gap-1 mb-5">
       <div v-for="cell in cells" :key="cell.key"
         :class="['min-h-[64px] rounded-lg p-1.5 text-sm transition-colors',
+          cell.isCurrentMonth && !cell.holiday ? 'cursor-pointer hover:bg-indigo-50/60' : '',
           cell.isCurrentMonth ? 'bg-white shadow-sm border border-gray-100' : 'bg-gray-50/50',
           cell.isToday ? 'ring-2 ring-brand-500' : '',
           cell.holiday ? 'bg-gray-100 opacity-60' : '',
-          cell.closure && !cell.holiday ? 'bg-emerald-50' : '']">
+          cell.closure && !cell.holiday ? 'bg-emerald-50' : '']"
+        @click="cell.isCurrentMonth && !cell.holiday && $emit('new-assignment', cell.key)">
         <div :class="['text-xs mb-1 font-medium', cell.isCurrentMonth ? 'text-gray-600' : 'text-gray-300']">
           {{ cell.day }}
         </div>
@@ -36,7 +38,7 @@
             {{ a.notes || 'Frei' }}
           </div>
           <button v-else
-            @click="$emit('open-assignment', a)"
+            @click.stop="$emit('open-assignment', a)"
             :style="{ backgroundColor: providerColor(a), color: '#fff' }"
             class="w-full text-left text-xs rounded px-1 py-0.5 mb-0.5 truncate hover:opacity-90 transition-opacity font-medium shadow-sm">
             {{ assignmentLabel(a) }}
@@ -83,7 +85,7 @@ const props = defineProps({
   closures: { type: Array, default: () => [] },
   providers: { type: Array, default: () => [] },
 })
-defineEmits(['prev', 'next', 'open-assignment'])
+defineEmits(['prev', 'next', 'open-assignment', 'new-assignment'])
 
 const weekdays = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So']
 const monthLabel = computed(() => props.month.format('MMMM YYYY'))

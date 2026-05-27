@@ -112,7 +112,10 @@ import {
   requiredBreakMinutes, legalMinBreakMinutes, formatHm,
 } from '../utils/time'
 
-const props = defineProps({ assignment: { type: Object, default: null } })
+const props = defineProps({
+  assignment: { type: Object, default: null },
+  initialDate: { type: String, default: '' },
+})
 const emit = defineEmits(['close', 'saved', 'deleted'])
 
 const kitas = ref([])
@@ -120,7 +123,7 @@ const providers = ref([])
 const selectedProvider = ref('')
 const kitaSearch = ref('')
 const form = ref({
-  kita_id: '', date: '',
+  kita_id: '', date: props.initialDate || '',
   start_time: '07:00', end_time: '17:00',
   actual_start_time: '', actual_break_start: '', actual_break_end: '', actual_end_time: '',
   group_name: '',
