@@ -54,15 +54,28 @@
           <div v-if="importResult[p.id]" class="px-4 pb-3">
             <div class="text-xs rounded-lg px-3 py-2"
               :class="importResult[p.id].warnings?.length ? 'bg-amber-50 text-amber-700' : 'bg-green-50 text-green-700'">
-              <template v-if="importResult[p.id].type === 'kitas'">
-                {{ importResult[p.id].imported }} Kitas importiert
-              </template>
-              <template v-else>
-                {{ importResult[p.id].created }} neu · {{ importResult[p.id].updated }} aktualisiert · {{ importResult[p.id].skipped }} übersprungen
-              </template>
-              <span v-if="importResult[p.id].warnings?.length" class="ml-2 text-orange-600">
-                · {{ importResult[p.id].warnings.length }} Warnung(en)
-              </span>
+              <div class="flex items-center justify-between">
+                <span>
+                  <template v-if="importResult[p.id].type === 'kitas'">
+                    {{ importResult[p.id].imported }} Kitas importiert
+                  </template>
+                  <template v-else>
+                    {{ importResult[p.id].created }} neu · {{ importResult[p.id].updated }} aktualisiert · {{ importResult[p.id].skipped }} übersprungen
+                  </template>
+                  <span v-if="importResult[p.id].warnings?.length" class="ml-2 text-orange-600">
+                    · {{ importResult[p.id].warnings.length }} Warnung(en)
+                  </span>
+                </span>
+                <button v-if="importResult[p.id].warnings?.length"
+                  @click="toggleWarnings(p.id)"
+                  class="ml-2 text-orange-600 hover:text-orange-800 font-medium">
+                  {{ expandedWarnings[p.id] ? '▲' : '▼' }}
+                </button>
+              </div>
+              <ul v-if="importResult[p.id].warnings?.length && expandedWarnings[p.id]"
+                class="mt-2 space-y-1 text-orange-700 border-t border-orange-200 pt-2">
+                <li v-for="(w, i) in importResult[p.id].warnings" :key="i" class="font-mono break-all">{{ w }}</li>
+              </ul>
             </div>
           </div>
         </div>
@@ -130,116 +143,18 @@
     </div>
 
     <!-- ── Kita Detail Pane (right slide-in) ──────────────────── -->
-    <Transition name="panel">
-      <div v-if="selectedKita" class="fixed inset-0 z-40 flex" @click.self="selectedKita = null">
-        <!-- Backdrop (clicking closes panel) -->
-        <div class="flex-1" @click="selectedKita = null" />
-
-        <!-- Panel -->
-        <div class="w-80 max-w-[90vw] bg-white shadow-2xl h-full overflow-y-auto flex flex-col"
-          @click.stop>
-          <!-- Header -->
-          <div class="flex items-start justify-between p-5 border-b border-gray-100 sticky top-0 bg-white z-10">
-            <div>
-              <h3 class="font-bold text-lg leading-tight text-gray-900">{{ selectedKita.name }}</h3>
-              <span v-if="providerOf(selectedKita)" class="inline-block mt-1 text-xs px-2 py-0.5 rounded-full text-white"
-                :style="{ backgroundColor: providerOf(selectedKita)?.color_hex }">
-                {{ providerOf(selectedKita)?.name }}
-              </span>
-            </div>
-            <button @click="selectedKita = null"
-              class="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors shrink-0 ml-2">
-              <X class="w-5 h-5" />
-            </button>
-          </div>
-
-          <!-- Body -->
-          <div class="p-5 space-y-5 flex-1">
-            <!-- Photo -->
-            <img v-if="selectedKita.photo_url" :src="selectedKita.photo_url" :alt="selectedKita.name"
-              class="w-full h-40 object-cover rounded-xl" />
-
-            <!-- Address -->
-            <div v-if="selectedKita.address">
-              <div class="flex items-center gap-1.5 text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1.5">
-                <MapPin class="w-3.5 h-3.5" /> Adresse
-              </div>
-              <p class="text-sm text-gray-700">{{ selectedKita.address }}</p>
-              <a :href="mapsUrl(selectedKita.address)" target="_blank" rel="noopener"
-                class="inline-flex items-center gap-1.5 mt-2 text-xs text-brand-500 hover:text-brand-600 transition-colors">
-                <ExternalLink class="w-3.5 h-3.5" /> In Google Maps öffnen
-              </a>
-            </div>
-
-            <!-- Leitung -->
-            <div v-if="selectedKita.leitung_name">
-              <div class="flex items-center gap-1.5 text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1.5">
-                <Users class="w-3.5 h-3.5" /> Leitung
-              </div>
-              <p class="text-sm text-gray-700">{{ selectedKita.leitung_name }}</p>
-            </div>
-
-            <!-- Contact -->
-            <div v-if="selectedKita.phone || selectedKita.email">
-              <div class="flex items-center gap-1.5 text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1.5">
-                <Phone class="w-3.5 h-3.5" /> Kontakt
-              </div>
-              <a v-if="selectedKita.phone" :href="`tel:${selectedKita.phone}`"
-                class="flex items-center gap-2 text-sm text-gray-700 hover:text-brand-500 transition-colors py-1">
-                <Phone class="w-4 h-4 text-gray-400" />
-                {{ selectedKita.phone }}
-              </a>
-              <a v-if="selectedKita.email" :href="`mailto:${selectedKita.email}`"
-                class="flex items-center gap-2 text-sm text-gray-700 hover:text-brand-500 transition-colors py-1 break-all">
-                <Mail class="w-4 h-4 text-gray-400 shrink-0" />
-                {{ selectedKita.email }}
-              </a>
-            </div>
-
-            <!-- ÖV -->
-            <div v-if="displayStops(selectedKita).length">
-              <div class="flex items-center gap-1.5 text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1.5">
-                <Bus class="w-3.5 h-3.5" /> ÖV-Haltestelle{{ displayStops(selectedKita).length > 1 ? 'n' : '' }}
-              </div>
-              <ul class="text-sm text-gray-700 space-y-0.5">
-                <li v-for="s in displayStops(selectedKita)" :key="s">{{ s }}</li>
-              </ul>
-            </div>
-
-            <!-- Groups -->
-            <div v-if="selectedKita.groups?.length">
-              <div class="flex items-center gap-1.5 text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">
-                <Users class="w-3.5 h-3.5" /> Gruppen
-              </div>
-              <div class="flex flex-wrap gap-1.5">
-                <span v-for="g in selectedKita.groups" :key="g"
-                  class="text-xs bg-gray-100 text-gray-600 px-2.5 py-1 rounded-full">{{ g }}</span>
-              </div>
-            </div>
-
-            <!-- Notes -->
-            <div v-if="selectedKita.notes">
-              <div class="flex items-center gap-1.5 text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1.5">
-                <FileText class="w-3.5 h-3.5" /> Notizen
-              </div>
-              <p class="text-sm text-gray-600 whitespace-pre-line">{{ selectedKita.notes }}</p>
-            </div>
-          </div>
-
-          <!-- Footer actions -->
-          <div class="p-4 border-t border-gray-100 flex gap-2">
-            <button @click="openKitaForm(selectedKita)"
-              class="flex-1 flex items-center justify-center gap-1.5 text-sm border border-gray-200 text-gray-600 rounded-lg py-2 hover:bg-gray-50 transition-colors">
-              <Pencil class="w-4 h-4" /> Bearbeiten
-            </button>
-            <button @click="deleteKita(selectedKita)"
-              class="flex items-center justify-center gap-1.5 text-sm border border-red-100 text-red-500 rounded-lg py-2 px-3 hover:bg-red-50 transition-colors">
-              <Trash2 class="w-4 h-4" />
-            </button>
-          </div>
-        </div>
-      </div>
-    </Transition>
+    <KitaDetailPanel :kita="selectedKita" :provider="providerOf(selectedKita)" @close="selectedKita = null">
+      <template #footer>
+        <button @click="openKitaForm(selectedKita)"
+          class="flex-1 flex items-center justify-center gap-1.5 text-sm border border-gray-200 text-gray-600 rounded-lg py-2 hover:bg-gray-50 transition-colors">
+          <Pencil class="w-4 h-4" /> Bearbeiten
+        </button>
+        <button @click="deleteKita(selectedKita)"
+          class="flex items-center justify-center gap-1.5 text-sm border border-red-100 text-red-500 rounded-lg py-2 px-3 hover:bg-red-50 transition-colors">
+          <Trash2 class="w-4 h-4" />
+        </button>
+      </template>
+    </KitaDetailPanel>
 
     <!-- ── Provider form modal ─────────────────────────────────── -->
     <div v-if="showForm" class="fixed inset-0 bg-black/40 flex items-end sm:items-center justify-center z-50 p-4">
@@ -410,11 +325,12 @@ import { ref, computed, reactive, onMounted } from 'vue'
 import {
   Plus, Pencil, Trash2, Upload, Repeat, FileSpreadsheet,
   ChevronDown, ChevronRight, Search,
-  MapPin, Phone, Mail, Bus, Users, FileText, X, ExternalLink,
+  Bus, Phone,
 } from 'lucide-vue-next'
 import { providersApi, kitasApi } from '../api'
 import StopSearch from '../components/StopSearch.vue'
 import RecurringForm from '../components/RecurringForm.vue'
+import KitaDetailPanel from '../components/KitaDetailPanel.vue'
 
 const providers = ref([])
 const kitas = ref([])
@@ -428,6 +344,8 @@ const editingKita = ref(null)
 const groupsText = ref('')
 const recurringProvider = ref(null)
 const importResult = reactive({})
+const expandedWarnings = reactive({})
+const toggleWarnings = (id) => { expandedWarnings[id] = !expandedWarnings[id] }
 
 const colors = ['#6366f1','#2563eb','#16a34a','#dc2626','#ea580c','#9333ea','#0891b2','#db2777']
 
@@ -468,13 +386,6 @@ const emptyKitaForm = () => ({
 })
 const kitaForm = ref(emptyKitaForm())
 const lookupLoading = ref(false)
-
-// Show up to 2 stops for a kita, falling back to the legacy stop_name field.
-const displayStops = (k) => {
-  const stops = (k?.stops || []).filter(Boolean)
-  if (stops.length) return stops
-  return k?.stop_name ? [k.stop_name] : []
-}
 
 const openKitaForm = (k) => {
   editingKita.value = k
@@ -532,7 +443,6 @@ const deleteKita = async (k) => {
 // ── Helpers ───────────────────────────────────────────────────
 const providerOf = (k) => providers.value.find(p => p.id === k?.provider_id)
 const kitasOf = (pid) => kitas.value.filter(k => k.provider_id === pid)
-const mapsUrl = (address) => `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}`
 
 const filteredKitas = computed(() => {
   let list = kitas.value
@@ -606,21 +516,3 @@ const load = async () => {
 onMounted(load)
 </script>
 
-<style scoped>
-.panel-enter-active,
-.panel-leave-active {
-  transition: opacity 0.2s ease;
-}
-.panel-enter-active > div:last-child,
-.panel-leave-active > div:last-child {
-  transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-}
-.panel-enter-from,
-.panel-leave-to {
-  opacity: 0;
-}
-.panel-enter-from > div:last-child,
-.panel-leave-to > div:last-child {
-  transform: translateX(100%);
-}
-</style>

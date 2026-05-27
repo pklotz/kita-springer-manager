@@ -144,6 +144,17 @@ func processSheet(db *sql.DB, rows [][]string, provider *models.Provider, cfg *m
 		}
 		endTime, _ := parseTime(endRaw)
 
+		if kitaID == "" {
+			label := groupName
+			if label == "" {
+				label = "unbekannt"
+			}
+			result.Warnings = append(result.Warnings, fmt.Sprintf(
+				"%s: Kita konnte nicht ermittelt werden (Gruppe %q nicht im Kita-Mapping; bitte Kita im Import-Dialog auswählen oder KitaMapping konfigurieren)",
+				date, label))
+			continue
+		}
+
 		hash := importHash(provider.ID, date, startRaw, endRaw)
 
 		a := &models.Assignment{
