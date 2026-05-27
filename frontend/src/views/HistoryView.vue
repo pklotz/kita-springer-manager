@@ -95,8 +95,8 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
-import { RouterLink } from 'vue-router'
+import { ref, computed, onMounted, watch } from 'vue'
+import { RouterLink, useRoute, useRouter } from 'vue-router'
 import { ArrowLeft, ArrowRight, Clock, Search } from 'lucide-vue-next'
 import dayjs from 'dayjs'
 import 'dayjs/locale/de'
@@ -109,12 +109,28 @@ import AssignmentForm from '../components/AssignmentForm.vue'
 
 dayjs.locale('de')
 
+const route = useRoute()
+const router = useRouter()
+
 const assignments = ref([])
 const editAssignment = ref(null)
 const today = dayjs().format('YYYY-MM-DD')
-const providerFilter = ref('')
-const kitaFilter = ref('')
-const query = ref('')
+
+// Persist filters in URL so $router.back() from a detail page restores them.
+const providerFilter = ref(route.query.provider || '')
+const kitaFilter = ref(route.query.kita || '')
+const query = ref(route.query.q || '')
+
+watch([providerFilter, kitaFilter, query], ([provider, kita, q]) => {
+  router.replace({
+    query: {
+      ...route.query,
+      provider: provider || undefined,
+      kita: kita || undefined,
+      q: q || undefined,
+    },
+  })
+})
 
 const day = (d) => dayjs(d).format('D')
 const weekday = (d) => dayjs(d).format('dd')

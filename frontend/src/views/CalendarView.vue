@@ -7,7 +7,8 @@
       :providers="providers"
       @prev="prevMonth"
       @next="nextMonth"
-      @open-assignment="a => $router.push(`/assignments/${a.id}`)" />
+      @open-assignment="a => $router.push(`/assignments/${a.id}`)"
+      @new-assignment="d => { newAssignmentDate = d; editAssignment = null; showForm = true }" />
 
     <div class="flex items-center justify-between mb-3 flex-wrap gap-2">
       <h3 class="font-semibold text-gray-700">Nächste Einsätze</h3>
@@ -24,7 +25,7 @@
           class="flex items-center gap-1 text-sm bg-purple-50 text-purple-700 px-3 py-1.5 rounded-lg hover:bg-purple-100 transition-colors">
           <Repeat class="w-4 h-4" /> Fixe Einsätze
         </button>
-        <button @click="editAssignment = null; showForm = true"
+        <button @click="editAssignment = null; newAssignmentDate = ''; showForm = true"
           class="flex items-center gap-1 text-sm bg-brand-500 text-white px-3 py-1.5 rounded-lg hover:bg-brand-600 transition-colors">
           <Plus class="w-4 h-4" /> Einsatz
         </button>
@@ -38,7 +39,8 @@
 
     <VacationList :vacations="upcomingVacations" @remove="removeClosure" />
 
-    <AssignmentForm v-if="showForm" :assignment="editAssignment" @close="showForm = false" @saved="onSaved" @deleted="onSaved" />
+    <AssignmentForm v-if="showForm" :assignment="editAssignment" :initial-date="editAssignment ? '' : newAssignmentDate"
+      @close="showForm = false; newAssignmentDate = ''" @saved="onSaved" @deleted="onSaved" />
     <ClosureForm v-if="showClosureForm" @close="showClosureForm = false" @saved="onClosureSaved" />
     <RecurringForm v-if="showRecurringForm" @close="showRecurringForm = false" @saved="load" />
   </div>
@@ -47,7 +49,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { Plus, CalendarOff, Repeat, History } from 'lucide-vue-next'
-import { RouterLink } from 'vue-router'
+import { RouterLink, useRouter, useRoute } from 'vue-router'
 import dayjs from 'dayjs'
 import { assignmentsApi, providersApi, closuresApi } from '../api'
 import AssignmentForm from '../components/AssignmentForm.vue'
@@ -57,6 +59,9 @@ import CalendarGrid from '../components/CalendarGrid.vue'
 import UpcomingList from '../components/UpcomingList.vue'
 import VacationList from '../components/VacationList.vue'
 
+const router = useRouter()
+const route = useRoute()
+
 const assignments = ref([])
 const providers = ref([])
 const closures = ref([])
@@ -64,10 +69,17 @@ const showForm = ref(false)
 const showClosureForm = ref(false)
 const showRecurringForm = ref(false)
 const editAssignment = ref(null)
-const currentMonth = ref(dayjs().startOf('month'))
+const newAssignmentDate = ref('')
 
-const prevMonth = () => { currentMonth.value = currentMonth.value.subtract(1, 'month') }
-const nextMonth = () => { currentMonth.value = currentMonth.value.add(1, 'month') }
+const monthFromQuery = route.query.month ? dayjs(route.query.month, 'YYYY-MM') : null
+const currentMonth = ref((monthFromQuery?.isValid() ? monthFromQuery : dayjs()).startOf('month'))
+
+const setMonth = (m) => {
+  currentMonth.value = m
+  router.replace({ query: { month: m.format('YYYY-MM') } })
+}
+const prevMonth = () => setMonth(currentMonth.value.subtract(1, 'month'))
+const nextMonth = () => setMonth(currentMonth.value.add(1, 'month'))
 
 const upcomingAssignments = computed(() =>
   assignments.value.filter(a => a.date >= dayjs().format('YYYY-MM-DD'))
@@ -109,5 +121,10 @@ const load = async () => {
 const onSaved = () => { showForm.value = false; editAssignment.value = null; load() }
 const onClosureSaved = () => { showClosureForm.value = false; loadClosures() }
 
-onMounted(load)
+onMounted(() => {
+  if (!route.query.month) {
+    router.replace({ query: { month: currentMonth.value.format('YYYY-MM') } })
+  }
+  load()
+})
 </script>

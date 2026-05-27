@@ -82,8 +82,8 @@ const assignments = ref([])
 const providers = ref([])
 const kitas = ref([])
 const selectedMonth = ref(route.query.month || dayjs().format('YYYY-MM'))
-const filterProvider = ref('')
-const groupByProvider = ref(false)
+const filterProvider = ref(route.query.provider || '')
+const groupByProvider = ref(route.query.group === '1')
 
 // Assignment.provider_id is sometimes empty (manual entries); fall back to the
 // Kita's provider so grouping/filtering still works.
@@ -97,9 +97,17 @@ const effectiveProvider = (a) => {
   return providers.value.find(p => p.id === pid) || null
 }
 
-// Keep URL ?month= synced so Historie → Arbeitszeit links preserve context
-watch(selectedMonth, (m) => {
-  router.replace({ query: { ...route.query, month: m } })
+// Keep URL synced so Historie → Arbeitszeit links preserve context AND
+// $router.back() from a detail page restores month + filter + grouping.
+watch([selectedMonth, filterProvider, groupByProvider], ([m, provider, group]) => {
+  router.replace({
+    query: {
+      ...route.query,
+      month: m,
+      provider: provider || undefined,
+      group: group ? '1' : undefined,
+    },
+  })
 })
 
 const today = dayjs().format('YYYY-MM-DD')
