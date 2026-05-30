@@ -118,7 +118,7 @@ const days = computed(() => {
   for (const a of props.items) {
     const day = byDate.get(a.date)
     if (!day) continue
-    const net = netWorkMinutes(a.actual_start_time, a.actual_break_start, a.actual_break_end, a.actual_end_time)
+    const net = netWorkMinutes(a.actual_start_time, a.actual_break_minutes, a.actual_end_time)
     if (net <= 0) continue
     const pid = a.provider?.id || ''
     let seg = day.segments.find(s => s.providerId === pid)

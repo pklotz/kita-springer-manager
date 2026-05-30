@@ -183,13 +183,13 @@ const totals = (rows) => {
   let brk = 0
   let breaches = 0
   for (const a of rows) {
-    net += netWorkMinutes(a.actual_start_time, a.actual_break_start, a.actual_break_end, a.actual_end_time)
-    brk += breakMinutes(a.actual_break_start, a.actual_break_end)
+    net += netWorkMinutes(a.actual_start_time, a.actual_break_minutes, a.actual_end_time)
+    brk += a.actual_break_minutes || 0
     const req = requiredBreakMinutes(
       grossWorkMinutes(a.actual_start_time, a.actual_end_time),
       a.provider?.min_break_minutes || 0,
     )
-    if (req > 0 && breakMinutes(a.actual_break_start, a.actual_break_end) < req) breaches++
+    if (req > 0 && (a.actual_break_minutes || 0) < req) breaches++
   }
   return { count: rows.length, netMin: net, breakMin: brk, breaches }
 }

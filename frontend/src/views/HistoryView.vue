@@ -135,16 +135,16 @@ watch([providerFilter, kitaFilter, query], ([provider, kita, q]) => {
 const day = (d) => dayjs(d).format('D')
 const weekday = (d) => dayjs(d).format('dd')
 const hasActual = (a) => a.actual_start_time || a.actual_end_time
-const netMin = (a) => netWorkMinutes(a.actual_start_time, a.actual_break_start, a.actual_break_end, a.actual_end_time)
+const netMin = (a) => netWorkMinutes(a.actual_start_time, a.actual_break_minutes, a.actual_end_time)
 const netHours = (a) => formatHours(netMin(a))
-const breakMin = (a) => breakMinutes(a.actual_break_start, a.actual_break_end)
+const breakMin = (a) => breakMinutes(a.actual_break_minutes)
 const breakHm = (a) => formatHm(breakMin(a))
 const breakWarn = (a) => {
   const req = requiredBreakMinutes(
     grossWorkMinutes(a.actual_start_time, a.actual_end_time),
     a.provider?.min_break_minutes || 0,
   )
-  return req > 0 && breakMin(a) < req
+  return req > 0 && a.actual_break_minutes < req
 }
 const differs = (a) =>
   hasActual(a) && netMin(a) !== diffMinutes(a.start_time, a.end_time)

@@ -99,22 +99,18 @@ const weekday = (d) => dayjs(d).format('dd')
 
 const morningRange = (a) => {
   if (!a.actual_start_time) return ''
-  const end = a.actual_break_start || (a.actual_break_end ? '' : a.actual_end_time)
-  return end ? `${a.actual_start_time}–${end}` : a.actual_start_time
+  return a.actual_end_time ? `${a.actual_start_time}–${a.actual_end_time}` : a.actual_start_time
 }
-const afternoonRange = (a) => {
-  if (!a.actual_break_end) return ''
-  return `${a.actual_break_end}–${a.actual_end_time || '–'}`
-}
-const netMin = (a) => netWorkMinutes(a.actual_start_time, a.actual_break_start, a.actual_break_end, a.actual_end_time)
-const breakMin = (a) => breakMinutes(a.actual_break_start, a.actual_break_end)
+const afternoonRange = (_a) => ''
+const netMin = (a) => netWorkMinutes(a.actual_start_time, a.actual_break_minutes, a.actual_end_time)
+const breakMin = (a) => breakMinutes(a.actual_break_minutes)
 const breakLabel = (a) => breakMin(a) > 0 ? formatHm(breakMin(a)) : '–'
 const breakWarn = (a) => {
   const req = requiredBreakMinutes(
     grossWorkMinutes(a.actual_start_time, a.actual_end_time),
     a.provider?.min_break_minutes || 0,
   )
-  return req > 0 && breakMin(a) < req
+  return req > 0 && a.actual_break_minutes < req
 }
 const breakWarnTitle = (a) => {
   const gross = grossWorkMinutes(a.actual_start_time, a.actual_end_time)
@@ -123,6 +119,6 @@ const breakWarnTitle = (a) => {
   const parts = []
   if (legal > 0) parts.push(`${legal} min laut ArG Art. 15`)
   if (prov > 0) parts.push(`${prov} min Trägervorgabe`)
-  return `Mindestpause: ${parts.join(', ')}`
+  return `Mindestpause: ${parts.join(', ') || '0'}`
 }
 </script>
