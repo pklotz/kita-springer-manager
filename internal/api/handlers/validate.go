@@ -36,12 +36,13 @@ func validateAssignment(a *models.Assignment) error {
 		{a.EndTime, "end_time"},
 		{a.ActualStartTime, "actual_start_time"},
 		{a.ActualEndTime, "actual_end_time"},
-		{a.ActualBreakStart, "actual_break_start"},
-		{a.ActualBreakEnd, "actual_break_end"},
 	} {
 		if err := validate.TimeHM(p.s, p.f); err != nil {
 			return err
 		}
+	}
+	if err := validate.IntRange(a.ActualBreakMinutes, "actual_break_minutes", 0, 600); err != nil {
+		return err
 	}
 	if !validStatus[a.Status] {
 		return errMsg("status: ungültiger Wert")
