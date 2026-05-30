@@ -14,7 +14,7 @@ const assignmentSelect = `
 	       COALESCE(a.kita_id,''), COALESCE(a.provider_id,''),
 	       COALESCE(a.group_name,''), a.date, a.start_time, a.end_time,
 	       COALESCE(a.actual_start_time,''),
-	       COALESCE(a.actual_break_start,''), COALESCE(a.actual_break_end,''),
+	       COALESCE(a.actual_break_minutes,0),
 	       COALESCE(a.actual_end_time,''),
 	       COALESCE(a.status,'scheduled'), COALESCE(a.source,'manual'),
 	       COALESCE(a.import_hash,''), COALESCE(a.notes,''), a.created_at,
@@ -71,7 +71,7 @@ func scanAssignments(rows *sql.Rows) ([]models.Assignment, error) {
 		if err := rows.Scan(
 			&a.ID, &a.KitaID, &a.ProviderID,
 			&a.GroupName, &a.Date, &a.StartTime, &a.EndTime,
-			&a.ActualStartTime, &a.ActualBreakStart, &a.ActualBreakEnd, &a.ActualEndTime,
+			&a.ActualStartTime, &a.ActualBreakMinutes, &a.ActualEndTime,
 			&a.Status, &a.Source, &a.ImportHash, &a.Notes, &a.CreatedAt,
 			&a.Kita.Name, &a.Kita.Address, &a.Kita.StopName,
 			&stopsJSON, &a.Kita.Phone, &a.Kita.Email,
@@ -170,11 +170,11 @@ func CreateAssignment(db *sql.DB, a *models.Assignment) error {
 	providerID := sql.NullString{String: a.ProviderID, Valid: a.ProviderID != ""}
 	_, err := db.Exec(
 		`INSERT INTO assignments (id, kita_id, provider_id, group_name, date, start_time, end_time,
-		 actual_start_time, actual_break_start, actual_break_end, actual_end_time,
+		 actual_start_time, actual_break_minutes, actual_end_time,
 		 status, source, import_hash, notes, created_at)
-		 VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+		 VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
 		a.ID, kitaID, providerID, a.GroupName, a.Date, a.StartTime, a.EndTime,
-		a.ActualStartTime, a.ActualBreakStart, a.ActualBreakEnd, a.ActualEndTime,
+		a.ActualStartTime, a.ActualBreakMinutes, a.ActualEndTime,
 		a.Status, a.Source, a.ImportHash, a.Notes, a.CreatedAt,
 	)
 	return err
@@ -185,10 +185,10 @@ func UpdateAssignment(db *sql.DB, a *models.Assignment) error {
 	providerID := sql.NullString{String: a.ProviderID, Valid: a.ProviderID != ""}
 	_, err := db.Exec(
 		`UPDATE assignments SET kita_id=?, provider_id=?, group_name=?, date=?, start_time=?, end_time=?,
-		 actual_start_time=?, actual_break_start=?, actual_break_end=?, actual_end_time=?,
+		 actual_start_time=?, actual_break_minutes=?, actual_end_time=?,
 		 status=?, notes=? WHERE id=?`,
 		kitaID, providerID, a.GroupName, a.Date, a.StartTime, a.EndTime,
-		a.ActualStartTime, a.ActualBreakStart, a.ActualBreakEnd, a.ActualEndTime,
+		a.ActualStartTime, a.ActualBreakMinutes, a.ActualEndTime,
 		a.Status, a.Notes, a.ID,
 	)
 	return err
