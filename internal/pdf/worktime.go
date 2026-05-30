@@ -222,10 +222,10 @@ func noteLabel(a models.Assignment) string {
 }
 
 func pauseLabel(a models.Assignment) string {
-	if a.ActualBreakStart == "" || a.ActualBreakEnd == "" {
+	if a.ActualBreakMinutes <= 0 {
 		return "–"
 	}
-	return a.ActualBreakStart + "–" + a.ActualBreakEnd
+	return fmt.Sprintf("%d min", a.ActualBreakMinutes)
 }
 
 func orDash(s string) string {
@@ -287,12 +287,10 @@ func parseHM(s string) (int, bool) {
 }
 
 func breakMinutes(a models.Assignment) int {
-	s, ok1 := parseHM(a.ActualBreakStart)
-	e, ok2 := parseHM(a.ActualBreakEnd)
-	if !ok1 || !ok2 || e <= s {
+	if a.ActualBreakMinutes < 0 {
 		return 0
 	}
-	return e - s
+	return a.ActualBreakMinutes
 }
 
 func grossMinutes(a models.Assignment) int {
