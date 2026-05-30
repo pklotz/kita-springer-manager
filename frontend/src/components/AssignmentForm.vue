@@ -62,16 +62,22 @@
           <TimeSelect v-model="form.actual_start_time" />
         </div>
         <div>
-          <label class="block text-xs text-amber-800 mb-1">Pause ab</label>
-          <TimeSelect v-model="form.actual_break_start" />
-        </div>
-        <div>
-          <label class="block text-xs text-amber-800 mb-1">Pause bis</label>
-          <TimeSelect v-model="form.actual_break_end" />
-        </div>
-        <div>
           <label class="block text-xs text-amber-800 mb-1">Ende</label>
           <TimeSelect v-model="form.actual_end_time" />
+        </div>
+      </div>
+      <div class="mb-2">
+        <label class="block text-xs text-amber-800 mb-1">Pause</label>
+        <div class="flex gap-2 flex-wrap">
+          <button v-for="min in [0, 15, 30, 45, 60]" :key="min"
+            type="button"
+            @click="form.actual_break_minutes = min"
+            :class="form.actual_break_minutes === min
+              ? 'bg-blue-600 text-white'
+              : 'bg-gray-100 text-gray-700 hover:bg-gray-200'"
+            class="px-3 py-1 rounded text-sm font-medium">
+            {{ min === 0 ? 'Keine' : min + ' min' }}
+          </button>
         </div>
       </div>
       <div v-if="hasActual" class="text-xs text-amber-900 flex items-center gap-3 flex-wrap">
@@ -125,7 +131,7 @@ const kitaSearch = ref('')
 const form = ref({
   kita_id: '', date: props.initialDate || '',
   start_time: '07:00', end_time: '17:00',
-  actual_start_time: '', actual_break_start: '', actual_break_end: '', actual_end_time: '',
+  actual_start_time: '', actual_break_minutes: 0, actual_end_time: '',
   group_name: '',
   notes: '',
 })
@@ -138,13 +144,11 @@ const hasActual = computed(() => form.value.actual_start_time || form.value.actu
 const copyPlanToActual = () => {
   form.value.actual_start_time = form.value.start_time
   form.value.actual_end_time = form.value.end_time
-  form.value.actual_break_start = ''
-  form.value.actual_break_end = ''
+  form.value.actual_break_minutes = currentProvider.value?.min_break_minutes || 0
 }
 const clearActual = () => {
   form.value.actual_start_time = ''
-  form.value.actual_break_start = ''
-  form.value.actual_break_end = ''
+  form.value.actual_break_minutes = 0
   form.value.actual_end_time = ''
 }
 
@@ -155,19 +159,14 @@ const currentProvider = computed(() => {
   return providers.value.find(p => p.id === kita.provider_id) || null
 })
 const netHm = computed(() => formatHm(netWorkMinutes(
-  form.value.actual_start_time, form.value.actual_break_start,
-  form.value.actual_break_end, form.value.actual_end_time,
+  form.value.actual_start_time, form.value.actual_break_minutes, form.value.actual_end_time,
 )))
-const breakHm = computed(() => formatHm(breakMinutes(
-  form.value.actual_break_start, form.value.actual_break_end,
-)))
+const breakHm = computed(() => formatHm(breakMinutes(form.value.actual_break_minutes)))
 const requiredMin = computed(() => requiredBreakMinutes(
   grossWorkMinutes(form.value.actual_start_time, form.value.actual_end_time),
   currentProvider.value?.min_break_minutes || 0,
 ))
-const actualBreakMin = computed(() => breakMinutes(
-  form.value.actual_break_start, form.value.actual_break_end,
-))
+const actualBreakMin = computed(() => breakMinutes(form.value.actual_break_minutes))
 const breakWarn = computed(() => requiredMin.value > 0 && actualBreakMin.value < requiredMin.value)
 const breakWarnTitle = computed(() => {
   const gross = grossWorkMinutes(form.value.actual_start_time, form.value.actual_end_time)
@@ -268,8 +267,7 @@ onMounted(async () => {
       start_time: a.start_time || '',
       end_time: a.end_time || '',
       actual_start_time: a.actual_start_time || '',
-      actual_break_start: a.actual_break_start || '',
-      actual_break_end: a.actual_break_end || '',
+      actual_break_minutes: a.actual_break_minutes || 0,
       actual_end_time: a.actual_end_time || '',
       group_name: a.group_name || '',
       notes: a.notes || '',
