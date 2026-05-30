@@ -147,6 +147,20 @@ var migrations = [][]string{
 	{
 		`INSERT OR IGNORE INTO settings (key, value) VALUES ('auth_download_token', lower(hex(randomblob(32))))`,
 	},
+	// v12: break duration in minutes instead of start/end times.
+	// Existing rows have their break duration computed from actual_break_start/end.
+	{
+		`ALTER TABLE assignments ADD COLUMN actual_break_minutes INTEGER NOT NULL DEFAULT 0`,
+		`UPDATE assignments
+		 SET actual_break_minutes = (
+		     CAST(strftime('%H', actual_break_end) AS INTEGER) * 60 +
+		     CAST(strftime('%M', actual_break_end) AS INTEGER) -
+		     CAST(strftime('%H', actual_break_start) AS INTEGER) * 60 -
+		     CAST(strftime('%M', actual_break_start) AS INTEGER)
+		 )
+		 WHERE actual_break_start != '' AND actual_break_end != ''
+		   AND actual_break_end > actual_break_start`,
+	},
 }
 
 func Open(path string) (*sql.DB, error) {
