@@ -69,15 +69,32 @@
       <div class="mb-2">
         <label class="block text-xs text-amber-800 mb-1">Pause</label>
         <div class="flex gap-2 flex-wrap">
-          <button v-for="min in [0, 15, 30, 45, 60]" :key="min"
+          <button v-for="min in [0, 15, 30, 45, 60, 90]" :key="min"
             type="button"
-            @click="form.actual_break_minutes = min"
+            @click="setBreak(min)"
             :class="form.actual_break_minutes === min
               ? 'bg-blue-600 text-white'
               : 'bg-gray-100 text-gray-700 hover:bg-gray-200'"
             class="px-3 py-1 rounded text-sm font-medium">
             {{ min === 0 ? 'Keine' : min + ' min' }}
           </button>
+        </div>
+        <!-- Zusammenklappbarer Hinweis zu gesetzlichen Pausenregelungen -->
+        <div class="mt-2">
+          <button type="button" @click="showBreakInfo = !showBreakInfo"
+            class="flex items-center gap-1 text-xs text-blue-500 hover:text-blue-700">
+            <ChevronDown v-if="!showBreakInfo" class="w-3 h-3" />
+            <ChevronUp v-else class="w-3 h-3" />
+            Gesetzliche Pausenregelung
+          </button>
+          <div v-if="showBreakInfo"
+            class="mt-1 p-2 rounded-lg bg-blue-50 border border-blue-100 text-xs text-blue-900 space-y-0.5">
+            <p class="font-semibold mb-1">ArG Art. 15 — Mindestpausen</p>
+            <p>Einsatz &gt; 5½ h &rarr; <strong>15 min</strong></p>
+            <p>Einsatz &gt; 7 h &rarr; <strong>30 min</strong></p>
+            <p>Einsatz &gt; 9 h &rarr; <strong>60 min</strong></p>
+            <p class="mt-1 text-blue-700 italic">Nur zur Information — wird nicht erzwungen.</p>
+          </div>
         </div>
       </div>
       <div v-if="hasActual" class="text-xs text-amber-900 flex items-center gap-3 flex-wrap">
@@ -108,7 +125,7 @@
 
 <script setup>
 import { ref, computed, watch, onMounted, nextTick } from 'vue'
-import { Search, Trash2 } from 'lucide-vue-next'
+import { Search, Trash2, ChevronDown, ChevronUp } from 'lucide-vue-next'
 import dayjs from 'dayjs'
 import { kitasApi, providersApi, assignmentsApi } from '../api'
 import Modal from './Modal.vue'
@@ -141,15 +158,39 @@ const isPastOrToday = computed(() =>
 )
 const hasActual = computed(() => form.value.actual_start_time || form.value.actual_end_time)
 
+const showBreakInfo = ref(false)
+const breakManuallySet = ref(false)
+
+const recommendedBreak = computed(() => {
+  if (!form.value.actual_start_time || !form.value.actual_end_time) return 0
+  const gross = grossWorkMinutes(form.value.actual_start_time, form.value.actual_end_time)
+  return requiredBreakMinutes(gross, currentProvider.value?.min_break_minutes || 0)
+})
+
+const setBreak = (min) => {
+  form.value.actual_break_minutes = min
+  breakManuallySet.value = true
+}
+
+watch(
+  [() => form.value.actual_start_time, () => form.value.actual_end_time],
+  () => {
+    if (!breakManuallySet.value) {
+      form.value.actual_break_minutes = recommendedBreak.value
+    }
+  }
+)
+
 const copyPlanToActual = () => {
+  breakManuallySet.value = false
   form.value.actual_start_time = form.value.start_time
   form.value.actual_end_time = form.value.end_time
-  form.value.actual_break_minutes = currentProvider.value?.min_break_minutes || 0
 }
 const clearActual = () => {
   form.value.actual_start_time = ''
   form.value.actual_break_minutes = 0
   form.value.actual_end_time = ''
+  breakManuallySet.value = false
 }
 
 // Live computations for the Ist-block
@@ -274,6 +315,9 @@ onMounted(async () => {
     }
     const kita = kitas.value.find(k => k.id === a.kita_id)
     if (kita?.provider_id) selectedProvider.value = kita.provider_id
+
+    // Gespeicherten Pausenwert beibehalten — nicht durch Auto-Empfehlung überschreiben
+    breakManuallySet.value = true
 
     // Pre-fill actual from planned when recording hours for today or a past day
     if (isPastOrToday.value && !hasActual.value) {
