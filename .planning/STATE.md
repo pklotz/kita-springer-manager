@@ -1,3 +1,18 @@
+---
+gsd_state_version: 1.0
+milestone: v1.0
+milestone_name: milestone
+status: milestone_complete
+last_updated: 2026-05-30T11:23:02.305Z
+progress:
+  total_phases: 1
+  completed_phases: 0
+  total_plans: 1
+  completed_plans: 1
+  percent: 0
+stopped_at: Milestone complete (Phase 01 was final phase)
+---
+
 # Project State
 
 ## Project Reference
@@ -5,7 +20,7 @@
 See: .planning/PROJECT.md (updated 2026-05-30)
 
 **Core value:** Pausen korrekt in die Arbeitszeitberechnung einfliessen lassen — als Dauer, nicht als Zeitraum.
-**Current focus:** Phase 1 — Pausen-Dauer-Erfassung
+**Current focus:** Milestone complete
 
 ## Current Status
 
