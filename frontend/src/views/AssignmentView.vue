@@ -119,7 +119,7 @@ import { assignmentsApi, transitApi } from '../api'
 import ConnectionCard from '../components/ConnectionCard.vue'
 import AssignmentForm from '../components/AssignmentForm.vue'
 import KitaDetailPanel from '../components/KitaDetailPanel.vue'
-import { diffMinutes, formatHours } from '../utils/time'
+import { diffMinutes, formatHours, netWorkMinutes } from '../utils/time'
 
 dayjs.locale('de')
 
@@ -156,7 +156,7 @@ const plannedMinutes = computed(() =>
   assignment.value ? diffMinutes(assignment.value.start_time, assignment.value.end_time) : 0
 )
 const actualMinutes = computed(() =>
-  assignment.value ? diffMinutes(assignment.value.actual_start_time, assignment.value.actual_end_time) : 0
+  assignment.value ? netWorkMinutes(assignment.value.actual_start_time, assignment.value.actual_break_minutes, assignment.value.actual_end_time) : 0
 )
 const plannedHours = computed(() => formatHours(plannedMinutes.value))
 const actualHours = computed(() => formatHours(actualMinutes.value))
