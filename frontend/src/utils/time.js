@@ -25,22 +25,15 @@ export function formatHm(minutes) {
   return `${h}:${String(m).padStart(2, '0')}`
 }
 
-// breakMinutes returns the duration of the recorded break (break_end − break_start),
-// or 0 if either field is empty.
-export function breakMinutes(breakStart, breakEnd) {
-  if (!breakStart || !breakEnd) return 0
-  return diffMinutes(breakStart, breakEnd)
+// breakMinutes returns the break duration in minutes from the stored integer.
+export function breakMinutes(breakMin) {
+  return breakMin || 0
 }
 
-// netWorkMinutes returns net working time for an assignment's actual times.
-// With a break: (breakStart − start) + (end − breakEnd).
-// Without a break: end − start.
-export function netWorkMinutes(start, breakStart, breakEnd, end) {
+// netWorkMinutes returns net working time: (end − start) − breakMin.
+export function netWorkMinutes(start, breakMin, end) {
   if (!start || !end) return 0
-  if (breakStart && breakEnd) {
-    return diffMinutes(start, breakStart) + diffMinutes(breakEnd, end)
-  }
-  return diffMinutes(start, end)
+  return Math.max(0, diffMinutes(start, end) - (breakMin || 0))
 }
 
 // grossWorkMinutes returns total elapsed time between start and end, regardless
