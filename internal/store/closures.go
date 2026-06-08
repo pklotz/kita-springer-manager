@@ -62,6 +62,60 @@ func DeleteClosure(db *sql.DB, id string) error {
 	return err
 }
 
+// ClosureAssignmentConflicts returns all scheduled assignments whose date is
+// in the given dates slice. Free/absence markers (status='free') are ignored.
+// Returns nil, nil when dates is empty.
+func ClosureAssignmentConflicts(db *sql.DB, dates []string) ([]models.Assignment, error) {
+	if len(dates) == 0 {
+		return nil, nil
+	}
+	placeholders := make([]byte, 0, 2*len(dates))
+	args := make([]any, len(dates))
+	for i, d := range dates {
+		if i > 0 {
+			placeholders = append(placeholders, ',')
+		}
+		placeholders = append(placeholders, '?')
+		args[i] = d
+	}
+	query := assignmentSelect +
+		` WHERE a.date IN (` + string(placeholders) + `)` +
+		` AND COALESCE(a.status,'scheduled') = 'scheduled'` +
+		` ORDER BY a.date, a.start_time`
+
+	rows, err := db.Query(query, args...)
+	if err != nil {
+		return nil, fmt.Errorf("ClosureAssignmentConflicts: %w", err)
+	}
+	defer rows.Close()
+	return scanAssignments(rows)
+}
+
+// CreateClosuresBatch inserts all closures atomically in a single transaction.
+// INSERT OR IGNORE makes same-type/same-date duplicates silent (idempotent via
+// the existing UNIQUE INDEX uidx_closures_type_date_ref).
+func CreateClosuresBatch(db *sql.DB, closures []models.Closure) error {
+	tx, err := db.Begin()
+	if err != nil {
+		return fmt.Errorf("CreateClosuresBatch begin: %w", err)
+	}
+	defer tx.Rollback() //nolint:errcheck
+
+	for i := range closures {
+		c := &closures[i]
+		c.ID = uuid.New().String()
+		c.CreatedAt = time.Now()
+		refID := sql.NullString{String: c.ReferenceID, Valid: c.ReferenceID != ""}
+		if _, err := tx.Exec(
+			`INSERT OR IGNORE INTO closures (id, type, reference_id, date, note, created_at) VALUES (?,?,?,?,?,?)`,
+			c.ID, c.Type, refID, c.Date, c.Note, c.CreatedAt,
+		); err != nil {
+			return fmt.Errorf("CreateClosuresBatch insert: %w", err)
+		}
+	}
+	return tx.Commit()
+}
+
 // ClosureDates returns a set of dates that are blocked for a given recurring rule.
 // Blocks: holidays, springerin vacation, provider closures, kita closures.
 func ClosureDates(db *sql.DB, from, to, providerID, kitaID string) (map[string]bool, error) {
