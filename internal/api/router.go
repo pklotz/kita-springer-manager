@@ -77,6 +77,7 @@ func NewRouter(holder *db.Holder, tc *transit.Client, assets fs.FS) http.Handler
 			r.Route("/closures", func(r chi.Router) {
 				r.Get("/", h.ListClosures)
 				r.Post("/", h.CreateClosure)
+				r.Post("/batch", h.CreateClosuresBatch)
 				r.Delete("/{id}", h.DeleteClosure)
 			})
 			r.Get("/settings", h.GetSettings)
