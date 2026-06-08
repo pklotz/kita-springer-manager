@@ -111,6 +111,7 @@ export const recurringApi = {
 export const closuresApi = {
   list: (params) => api.get('/closures', { params }).then(r => r.data),
   create: (data) => api.post('/closures', data).then(r => r.data),
+  createBatch: (data) => api.post('/closures/batch', data).then(r => r.data),
   delete: (id) => api.delete(`/closures/${id}`),
 }
 

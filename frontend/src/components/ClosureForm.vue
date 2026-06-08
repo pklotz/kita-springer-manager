@@ -55,7 +55,6 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
-import dayjs from 'dayjs'
 import { closuresApi, providersApi, kitasApi } from '../api'
 import Modal from './Modal.vue'
 
@@ -91,17 +90,34 @@ const canSave = computed(() => {
 })
 
 const save = async () => {
-  const from = dayjs(form.value.date_from)
-  const to = form.value.date_to ? dayjs(form.value.date_to) : from
-
-  for (let d = from; !d.isAfter(to); d = d.add(1, 'day')) {
-    await closuresApi.create({
-      type: form.value.type,
-      reference_id: form.value.reference_id || undefined,
-      date: d.format('YYYY-MM-DD'),
-      note: form.value.note,
-    })
+  const payload = {
+    type: form.value.type,
+    date_from: form.value.date_from,
+    date_to: form.value.date_to || form.value.date_from,
+    note: form.value.note || undefined,
   }
+  if (form.value.reference_id) {
+    payload.reference_id = form.value.reference_id
+  }
+
+  try {
+    await closuresApi.createBatch(payload)
+  } catch (e) {
+    if (e.response?.status === 409) {
+      // Conflict: scheduled assignment overlaps — ask user for confirmation
+      const msg = e.response.data?.error || 'An einem der Tage ist bereits ein Einsatz geplant — trotzdem als Abwesenheit eintragen?'
+      if (!window.confirm(msg)) {
+        // User cancelled — do not show an additional error toast
+        return
+      }
+      // User confirmed — retry with force=true
+      await closuresApi.createBatch({ ...payload, force: true })
+    } else {
+      // Non-409 errors: re-throw so the global interceptor shows a toast
+      throw e
+    }
+  }
+
   emit('saved')
 }
 
