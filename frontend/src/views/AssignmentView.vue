@@ -1,13 +1,23 @@
 <template>
   <div v-if="assignment">
     <div class="flex items-center gap-3 mb-6">
-      <button @click="$router.back()" class="p-2 rounded-lg hover:bg-gray-200 transition-colors">
+      <button @click="$router.back()" class="p-2 rounded-lg hover:bg-gray-200 transition-colors" title="Zurück zum Kalender">
         <ArrowLeft class="w-5 h-5" />
       </button>
       <div class="flex-1 min-w-0">
         <h2 class="text-xl font-semibold truncate">{{ assignment.kita?.name }}</h2>
         <p class="text-gray-500 text-sm">{{ formatDate(assignment.date) }}</p>
       </div>
+      <button @click="goToSibling(prevId)" :disabled="!prevId"
+        class="p-2 rounded-lg hover:bg-gray-200 text-gray-500 hover:text-gray-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+        title="Vorheriger Einsatz">
+        <ChevronLeft class="w-5 h-5" />
+      </button>
+      <button @click="goToSibling(nextId)" :disabled="!nextId"
+        class="p-2 rounded-lg hover:bg-gray-200 text-gray-500 hover:text-gray-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+        title="Nächster Einsatz">
+        <ChevronRight class="w-5 h-5" />
+      </button>
       <button @click="showEditForm = true"
         class="p-2 rounded-lg hover:bg-gray-200 text-gray-500 hover:text-gray-700 transition-colors">
         <Pencil class="w-5 h-5" />
@@ -110,9 +120,9 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { ArrowLeft, Clock, MapPin, FileText, CheckCircle2, Pencil, Footprints, MoreHorizontal } from 'lucide-vue-next'
+import { ArrowLeft, ChevronLeft, ChevronRight, Clock, MapPin, FileText, CheckCircle2, Pencil, Footprints, MoreHorizontal } from 'lucide-vue-next'
 import dayjs from 'dayjs'
 import 'dayjs/locale/de'
 import { assignmentsApi, transitApi } from '../api'
@@ -126,6 +136,7 @@ dayjs.locale('de')
 const route = useRoute()
 const router = useRouter()
 const assignment = ref(null)
+const siblings = ref([])
 const connections = ref([])
 const walkToFirstStop = ref(0)
 const loading = ref(false)
@@ -168,6 +179,16 @@ const hourDelta = computed(() => {
   return `${sign}${formatHours(Math.abs(d))} h`
 })
 
+// Prev/Next navigation — computed from the siblings list (status !== 'free')
+const currentIndex = computed(() => siblings.value.findIndex(a => a.id === route.params.id))
+const prevId = computed(() => currentIndex.value > 0 ? siblings.value[currentIndex.value - 1]?.id : null)
+const nextId = computed(() => currentIndex.value >= 0 && currentIndex.value < siblings.value.length - 1
+  ? siblings.value[currentIndex.value + 1]?.id : null)
+
+const goToSibling = (id) => {
+  if (id) router.push('/assignments/' + id)
+}
+
 const loadConnections = async () => {
   if (!assignment.value || !isFuture.value) return
   loading.value = true
@@ -190,6 +211,9 @@ const loadConnections = async () => {
 const loadAssignment = async () => {
   assignment.value = await assignmentsApi.get(route.params.id)
   customTime.value = assignment.value.start_time || ''
+  // Load sibling list for prev/next navigation — filter out free/absence markers
+  const all = await assignmentsApi.list()
+  siblings.value = (all || []).filter(a => a.status !== 'free')
 }
 
 const onSaved = async () => {
@@ -203,6 +227,15 @@ const onDeleted = () => {
   // came from (calendar or history).
   router.back()
 }
+
+// Re-load when navigating between siblings (same route, different :id param)
+watch(() => route.params.id, async (newId) => {
+  if (!newId) return
+  connections.value = []
+  walkToFirstStop.value = 0
+  await loadAssignment()
+  if (isFuture.value) await loadConnections()
+})
 
 onMounted(async () => {
   await loadAssignment()
